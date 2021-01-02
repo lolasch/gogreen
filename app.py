@@ -83,28 +83,28 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
     Input('schadwert', 'value')])
 def make_line_charts(value1, value2):
     if value1 == "Tag":
-        quelle = pd.read_csv("./daten"+ value2 + "Tag.csv")
+        quelle = pd.read_csv("./daten/"+ value2 + "Tag.csv")
         figure = px.line(quelle, x = "Datum", y="Durchschnitt", title="Tagesschnitt", color= "Ort")
     elif value1 == "Woche":
-        quelle = pd.read_csv("./daten"+ value2 + "Woche.csv")
+        quelle = pd.read_csv("./daten/"+ value2 + "Woche.csv")
         figure = px.line(quelle, x = "Wochennummer", y="Durchschnitt", title="Wochenschnitt", color= "Ort")
     else:
-        quelle = pd.read_csv("./daten"+ value2 + "Monat.csv")
+        quelle = pd.read_csv("./daten/"+ value2 + "Monat.csv")
         figure = px.line(quelle, x = "Monat", y="Durchschnitt", title="Monatsschnitt", color= "Ort")
     figure.update_xaxes(rangeslider_visible=True)
 
-    fig2 = px.scatter_mapbox(quelle, lat="Lat", lon="Long", zoom=11, height=500, width=800)
+    fig2 = px.scatter_mapbox(quelle, lat="Lat", lon="Long", zoom=11, height=500, width=800, size="Durchschnitt", color= "Ort")
     fig2.update_layout(mapbox_style="open-street-map")
     fig2.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
 
     return (
         html.Div([
-                html.H3('Map'),
+                html.H3('Karte'),
                 dcc.Graph(id='g1', figure=fig2)
             ], className="six columns"),
 
         html.Div([
-            html.H3('Time'),
+            html.H3('Zeitlicher Verlauf'),
 
             html.Div(
                 dcc.Graph(

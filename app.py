@@ -57,7 +57,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                 {'label': 'PM10', 'value': 'PM10'},
                 {'label': 'SO2', 'value': 'SO2'}
             ],
-            value='NO',
+            value='NO2',
             labelStyle={'display': 'inline-block'}
         ),
         dcc.RadioItems(
@@ -71,7 +71,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                 {'label': 'Woche', 'value': 'Woche'},
                 {'label': 'Monat', 'value': 'Monat'}
             ],
-            value='Tag',
+            value='Woche',
             labelStyle={'display': 'inline-block'}
         ),
         html.Div(id='time'),    
@@ -87,14 +87,14 @@ def make_line_charts(value1, value2):
         figure = px.line(quelle, x = "Datum", y="Durchschnitt", title="Tagesschnitt", color= "Ort")
     elif value1 == "Woche":
         quelle = pd.read_csv("./daten/"+ value2 + "Woche.csv")
-        figure = px.line(quelle, x = "Wochennummer", y="Durchschnitt", title="Wochenschnitt", color= "Ort")
+        figure = px.line(quelle, x = "Wochenbeginn", y="Durchschnitt", title="Wochenschnitt", color= "Ort")
     else:
         quelle = pd.read_csv("./daten/"+ value2 + "Monat.csv")
         figure = px.line(quelle, x = "Monat", y="Durchschnitt", title="Monatsschnitt", color= "Ort")
     figure.update_xaxes(rangeslider_visible=True)
 
     fig2 = px.scatter_mapbox(quelle, lat="Lat", lon="Long", zoom=11, height=500, width=800, size="Durchschnitt", color= "Ort")
-    fig2.update_layout(mapbox_style="open-street-map")
+    fig2.update_layout(mapbox_style="carto-positron")
     fig2.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
 
     return (

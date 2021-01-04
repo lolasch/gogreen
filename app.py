@@ -6,6 +6,7 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 from dash.dependencies import Input, Output
@@ -93,8 +94,8 @@ def make_line_charts(value1, value2):
         figure = px.line(quelle, x = "Monat", y="Durchschnitt", title="Monatsschnitt", color= "Ort")
     figure.update_xaxes(rangeslider_visible=True)
 
-    fig2 = px.scatter_mapbox(quelle, lat="Lat", lon="Long", zoom=11, height=500, width=800, size="Durchschnitt", color= "Ort")
-    fig2.update_layout(mapbox_style="carto-positron")
+    fig2 = px.scatter_mapbox(quelle, lat="Lat", lon="Long", zoom=11, height=500, width=800, color= "Ort")
+    fig2.update_layout(mapbox_style="open-street-map")
     fig2.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
 
     return (
@@ -118,4 +119,4 @@ def make_line_charts(value1, value2):
     
 
 if __name__ == '__main__':
-    app.run_server(debug=True, threaded=True)
+    app.run_server(debug=True, threaded=True,use_reloader=True)

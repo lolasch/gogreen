@@ -135,6 +135,12 @@ def make_line_charts(zeit, schadstoff, start_date, end_date):
     zeitstrahl.update_layout(xaxis_range=[start_date,end_date])
     zeitstrahl.update_layout(height=300,margin={"r":0,"t":30,"l":30,"b":0},title_x=0.5)
     zeitverlauf.update_layout(height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
+    if schadstoff == "CO":
+        zeitverlauf.update_yaxes(title_text="<b>mg/m³</b>")
+        zeitstrahl.update_yaxes(title_text="<b>mg/m³</b>")
+    else: 
+        zeitverlauf.update_yaxes(title_text="<b>µg/m³</b>")
+        zeitstrahl.update_yaxes(title_text="<b>µg/m³</b>")
     corona = make_subplots(specs=[[{"secondary_y": True}]])
     corona.add_trace(
         go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Faelle, name="yaxis data"),
@@ -146,8 +152,8 @@ def make_line_charts(zeit, schadstoff, start_date, end_date):
 
     corona.update_layout(title_text="Corona-Inzidenzzahlen",showlegend=False,height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
     corona.update_xaxes(title_text="Zeit")
-    corona.update_yaxes(title_text="<b>Fallzahlen</b>", secondary_y=False, title_font=dict(color="red"))
-    corona.update_yaxes(title_text="<b>Tote</b>", secondary_y=True,title_font=dict(color="blue"))
+    corona.update_yaxes(title_text="<b>Fallzahlen</b> absolut", secondary_y=False, title_font=dict(color="red"))
+    corona.update_yaxes(title_text="<b>Tote</b> absolut", secondary_y=True,title_font=dict(color="blue"))
     #corona.update_layout(xaxis_range=[start_date,end_date])
 
     karte = px.scatter_mapbox(quelle, lat="Lat", lon="Long", zoom=11, height=300, width=870, color= "Ort", size = "Durchschnitt")
@@ -237,19 +243,20 @@ def verlaufBerechnen(zeitabschnitt):
                 datum = datum.split("-")
                 datum = datetime.datetime(int(datum[0]), int(datum[1]), int(datum[2]))
                 wochentag = calendar.day_name[datum.weekday()]
+                wochentagInt = datum.weekday()
                 if wert != "NA":
                     wert = float(wert)
-                    if (lat,lon,ort, wochentag) in dic:
-                        values = dic[(lat,lon,ort,wochentag)]
+                    if (wochentagInt,lat,lon,ort, wochentag) in dic:
+                        values = dic[(wochentagInt,lat,lon,ort,wochentag)]
                         values[0] += wert
                         values[1] += 1
-                        dic[(lat,lon,ort,wochentag)] = values
+                        dic[(wochentagInt,lat,lon,ort,wochentag)] = values
                     else:
-                        dic[(lat,lon,ort,wochentag)] = [wert, 1]
+                        dic[(wochentagInt,lat,lon,ort,wochentag)] = [wert, 1]
             for ele in sorted(dic):
                 values = dic[ele]
                 avg = values[0] / values[1]
-                tagout.write(str(ele[0]) + "," + str(ele[1]) + "," + str(ele[2]) + "," + str(ele[3]) + "," + "%.3f" %avg + "\n")
+                tagout.write(str(ele[1]) + "," + str(ele[2]) + "," + str(ele[3]) + "," + str(ele[4]) + "," + "%.3f" %avg + "\n")
     else:
         with open("./daten/gefiltert.csv") as file:
             tagout = open("./daten/verlaufMonat.csv", "w")

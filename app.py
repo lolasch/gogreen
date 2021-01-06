@@ -35,13 +35,14 @@ colors = {
 
 
 app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
-    html.H1(
-        children='Go Green',
-        style={
-            'textAlign': 'center',
-            'color': colors['text']
-        }
-    ),
+    
+    html.Img(style={
+        'width' : 250,
+        'display' : 'block',
+        'margin-left': 'auto',
+        'margin-right': 'auto',
+        'text-align': 'center'
+    },src=app.get_asset_url('gogreen.png')),
 
     html.Div(children='Luftqualität während einer Pandemie.', style={
         'textAlign': 'center',
@@ -143,13 +144,13 @@ def make_line_charts(zeit, schadstoff, start_date, end_date):
         go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Tote, name="yaxis2 data"),secondary_y=True,
     )
 
-    corona.update_layout(title_text="Corona-Inzidenzzahlen",showlegend=False,height=300,margin={"r":0,"t":40,"l":0,"b":0},title_x=0.5)
+    corona.update_layout(title_text="Corona-Inzidenzzahlen",showlegend=False,height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
     corona.update_xaxes(title_text="Zeit")
     corona.update_yaxes(title_text="<b>Fallzahlen</b>", secondary_y=False, title_font=dict(color="red"))
     corona.update_yaxes(title_text="<b>Tote</b>", secondary_y=True,title_font=dict(color="blue"))
     #corona.update_layout(xaxis_range=[start_date,end_date])
 
-    karte = px.scatter_mapbox(quelle, lat="Lat", lon="Long", zoom=11, height=300, width=800, color= "Ort", size = "Durchschnitt")
+    karte = px.scatter_mapbox(quelle, lat="Lat", lon="Long", zoom=11, height=300, width=870, color= "Ort", size = "Durchschnitt")
     karte.update_layout(mapbox_style="open-street-map",showlegend=False)
     karte.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
 

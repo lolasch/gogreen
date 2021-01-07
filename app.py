@@ -113,23 +113,24 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
 def make_line_charts(zeit, schadstoff, start_date, end_date):
     filtern(schadstoff, start_date, end_date)
     verlaufBerechnen(zeit)
+    kartenWerte()
 
     if zeit == "Tag":
         quelle = pd.read_csv("./daten/"+ schadstoff + "Tag.csv")
         zeitstrahl = px.line(quelle, x = "Datum", y="Durchschnitt", title="Tagesschnitt", color= "Ort")
-        mitteTag = pd.read_csv("./daten/verlaufTag.csv")
+        mitteTag = pd.read_csv("./daten/verlauf.csv")
         zeitverlauf = px.line(mitteTag, x="Uhrzeit", y="Wert", color="Ort", title = "Durchschnittliche tägliche Luftbelastung vom " + start_date +" bis " + end_date)
         coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSort.csv")
     elif zeit == "Woche":
         quelle = pd.read_csv("./daten/"+ schadstoff + "Woche.csv")
         zeitstrahl = px.line(quelle, x = "Wochenbeginn", y="Durchschnitt", title="Wochenschnitt", color= "Ort")
-        mitteWoche = pd.read_csv("./daten/verlaufWoche.csv")
+        mitteWoche = pd.read_csv("./daten/verlauf.csv")
         zeitverlauf = px.line(mitteWoche, x="Wochentag", y="Wert", color="Ort", title = "Durchschnittliche wöchentliche Luftbelastung im Zeitraum " + start_date +" bis " + end_date)
         coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSortWoche.csv")
     else:
         quelle = pd.read_csv("./daten/"+ schadstoff + "Monat.csv")
         zeitstrahl = px.line(quelle, x = "Monat", y="Durchschnitt", title="Monatsschnitt", color= "Ort")
-        mitteMonat = pd.read_csv("./daten/verlaufMonat.csv")
+        mitteMonat = pd.read_csv("./daten/verlauf.csv")
         zeitverlauf = px.line(mitteMonat, x="Tag", y="Wert", color="Ort", title = "Durchschnittliche monatliche Luftbelastung im Zeitraum " + start_date +" bis " + end_date)
         coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSortWoche.csv")
     zeitstrahl.update_layout(xaxis_range=[start_date,end_date])
@@ -156,7 +157,7 @@ def make_line_charts(zeit, schadstoff, start_date, end_date):
     corona.update_yaxes(title_text="<b>Tote</b> absolut", secondary_y=True,title_font=dict(color="blue"))
     #corona.update_layout(xaxis_range=[start_date,end_date])
 
-    karte = px.scatter_mapbox(quelle, lat="Lat", lon="Long", zoom=11, height=300, width=870, color= "Ort", size = "Durchschnitt")
+    karte = px.scatter_mapbox(pd.read_csv("./daten/karte.csv"), lat="Lat", lon="Long", zoom=11, height=300, width=870, color= "Ort", size = "Durchschnitt")
     karte.update_layout(mapbox_style="open-street-map",showlegend=False)
     karte.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
 
@@ -199,7 +200,7 @@ def verlaufBerechnen(zeitabschnitt):
     #
     if zeitabschnitt == "Tag":
         with open("./daten/gefiltert.csv") as file:
-            tagout = open("./daten/verlaufTag.csv", "w")
+            tagout = open("./daten/verlauf.csv", "w")
             tagout.write("Lat,Long,Ort,Uhrzeit,Wert\n")
             next(file)
             dic = {}
@@ -228,7 +229,7 @@ def verlaufBerechnen(zeitabschnitt):
             
     elif zeitabschnitt == "Woche":
          with open("./daten/gefiltert.csv") as file:
-            tagout = open("./daten/verlaufWoche.csv", "w")
+            tagout = open("./daten/verlauf.csv", "w")
             tagout.write("Lat,Long,Ort,Wochentag,Wert\n")
             next(file)
             dic = {}
@@ -259,7 +260,7 @@ def verlaufBerechnen(zeitabschnitt):
                 tagout.write(str(ele[1]) + "," + str(ele[2]) + "," + str(ele[3]) + "," + str(ele[4]) + "," + "%.3f" %avg + "\n")
     else:
         with open("./daten/gefiltert.csv") as file:
-            tagout = open("./daten/verlaufMonat.csv", "w")
+            tagout = open("./daten/verlauf.csv", "w")
             tagout.write("Lat,Long,Ort,Tag,Wert\n")
             next(file)
             dic = {}
@@ -285,6 +286,7 @@ def verlaufBerechnen(zeitabschnitt):
                 values = dic[ele]
                 avg = values[0] / values[1]
                 tagout.write(str(ele[0]) + "," + str(ele[1]) + "," + str(ele[2]) + "," + str(ele[3]) + "," + "%.3f" %avg + "\n")
+    tagout.close()
                 
 
 def filtern(schadstoff, start, end):
@@ -305,7 +307,33 @@ def filtern(schadstoff, start, end):
             if start <= datum and datum <= end:
                 output.write(lines + "\n")
 
+def kartenWerte():
+    kartenFile = open("./daten/karte.csv", "w")
+    kartenFile.write("Lat,Long,Ort,Durchschnitt\n")
+    with open("./daten/verlauf.csv", "r")  as file:
+        next(file)
+        dic = {}
+        for lines in file:
+            lines = lines.strip()
+            linie = lines.split(",")
+            lat = linie[0]
+            lon = linie[1]
+            ort = linie[2]
+            wert = float(linie[4])
+            if (lat,lon,ort) in dic:
+                values = dic[lat,lon,ort]
+                values[0] += wert
+                values[1] += 1
+                dic[lat,lon,ort] = values
+            else:
+                dic[lat,lon,ort] = [wert, 1]
+
+    for ele in dic:
+        values = dic[ele]
+        avg = values[0] / values[1]
+        kartenFile.write(str(ele[0]) + "," + str(ele[1]) + "," + str(ele[2]) + "," + "%.3f" %avg + "\n")
+
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, threaded=True,use_reloader=True)
+    app.run_server(debug=True,use_reloader=True)

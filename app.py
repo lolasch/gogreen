@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 from datetime import date
+import time
 import calendar
 import datetime
 from dash.dependencies import Input, Output
@@ -30,7 +31,6 @@ colors = {
 
 # assume you have a "long-form" data frame
 # see https://plotly.com/python/px-arguments/ for more options
-
 
 
 
@@ -86,7 +86,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                 {'label': 'Woche', 'value': 'Woche'},
                 {'label': 'Monat', 'value': 'Monat'}
             ],
-            value='Tag',
+            value='Woche',
             labelStyle={'display': 'inline-block'}
         ),
         dcc.DatePickerRange(
@@ -95,10 +95,10 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
             },  
             id='datepicker',
             min_date_allowed=date(2019, 4, 1),
-            max_date_allowed=date(2020, 11, 30),
+            max_date_allowed=date(2020, 12, 31),
             initial_visible_month=date(2019, 4, 1),
             start_date=date(2019, 4, 1),
-            end_date=date(2020, 11, 30)
+            end_date=date(2020, 12, 31)
         ),
         html.Div(id='time'), 
 
@@ -111,15 +111,18 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
     Input('datepicker', 'start_date'),
     Input('datepicker', 'end_date')])
 def make_line_charts(zeit, schadstoff, start_date, end_date):
-    filtern(schadstoff, start_date, end_date)
-    zeitstrahlBerechnen(zeit)
-    kartenWerte()
+    start = time.time()
+    gefiltert = filtern(schadstoff, start_date, end_date)
+    abc = zeitstrahlBerechnen(zeit, gefiltert)
+    zeitstrahl = abc[0]
+    verlauf = abc[1]
+    kartenDic = kartenWerte(gefiltert)
 
-    zeitstrahlQuelle = pd.read_csv("./daten/zeitstrahl.csv")
+    zeitstrahlQuelle = pd.DataFrame.from_dict(zeitstrahl ,orient='index', columns = ["Ort","Datum","Wert"])
     zeitstrahl = px.line(zeitstrahlQuelle, x = "Datum", y="Wert", color= "Ort")
 
-    verlaufQuelle = pd.read_csv("./daten/verlauf.csv")
-    zeitverlauf = px.line(verlaufQuelle, x="Zeit", y="Wert", color="Ort")
+    verlaufQuelle = pd.DataFrame.from_dict(verlauf ,orient='index', columns = ["Ort","Datum","Wert"])
+    zeitverlauf = px.line(verlaufQuelle, x="Datum", y="Wert", color="Ort")
     if zeit == "Tag":
         coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSort.csv")
     else:
@@ -149,11 +152,13 @@ def make_line_charts(zeit, schadstoff, start_date, end_date):
     corona.update_yaxes(title_text="<b>Tote</b> absolut", secondary_y=True,title_font=dict(color="blue"))
     #corona.update_layout(xaxis_range=[start_date,end_date])
 
-    karte = px.scatter_mapbox(pd.read_csv("./daten/karte.csv"), lat="Lat", lon="Long", zoom=11, height=300, width=870, color= "Ort", size = "Durchschnitt")
+
+    karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), color = "Ort", lat="Lat", lon="Long", zoom=11, height=300, width=870, size = "Durchschnitt")
     karte.update_layout(mapbox_style="open-street-map",showlegend=False)
     karte.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
 
-
+    end = time.time()
+    print(end - start)
     return (
         html.Div([
                 html.H3('Karte'),
@@ -193,124 +198,122 @@ def make_line_charts(zeit, schadstoff, start_date, end_date):
 def filtern(schadstoff, start, end):
     #Öffnet das zum Schadstoff passende File und entfernt alle Linien, die nicht im Datumsrange liegen. Speichert diese in gefiltert
     #
-    output = open("./daten/gefiltert.csv", "w")
-    output.write("Ort,Datum,Wert\n")
+    gefiltert = {}
     start = datetime.datetime(int(start[:4]),int(start[5:7]),int(start[8:10]))
     end = datetime.datetime(int(end[:4]),int(end[5:7]),int(end[8:10]))
-    with open("./daten/" + schadstoff + ".csv") as file:
-        next(file)
-        for lines in file:
-            lines = lines.strip()
-            linie = lines.split(",")
-            datum = linie[1].split(" ")[0]
-            datum = datum.split("-")
-            datum = datetime.datetime(int(datum[0]), int(datum[1]), int(datum[2]))
-            if start <= datum and datum <= end:
-                output.write(lines + "\n")
-
-def zeitstrahlBerechnen(zeit):
-    #Berechnet die Werte für den Zeistrahl und den Tages/wochen/Monatsverlauf, indem die Daten jeweils in einem Dic gespeichert werden und dann der Mittelwert gebildet wird
-    #
-    zeitstrahl = open("./daten/zeitstrahl.csv", "w")
-    zeitstrahl.write("Ort,Datum,Wert\n") 
-    verlauf = open("./daten/verlauf.csv", "w")
-    verlauf.write("Ort,Zeit,Wert\n")
-    file = open("./daten/gefiltert.csv")
-    zeitDic = {}
-    verlaufDic = {}
+    file = open("./daten/" + schadstoff + ".csv")
     next(file)
     for lines in file:
         lines = lines.strip()
         linie = lines.split(",")
         ort = linie[0]
+        datum = linie[1].split(" ")
+        stunde = int(datum[1]) % 24
+        datum = datum[0].split("-")
+        datum = datetime.datetime(int(datum[0]),int(datum[1]),int(datum[2]),int(stunde))
         wert = linie[2]
         if wert != "NA":
-            wert = float(wert)
-            if zeit == "Tag":
-                datum = linie[1].split(" ")[0]
-                time = linie[1].split(" ")[1]
-            elif zeit == "Woche":
-                datum = linie[1].split(" ")[0].split("-")
-                datum = datetime.datetime(int(datum[0]), int(datum[1]), int(datum[2])) # Formatiert Datum ins ISO-Format
-                wochensplit = datum.isocalendar() # Jahr, Wochennummer, Tag
-                wochentag = calendar.day_name[datum.weekday()] #Name des Wochentags -> Samstag
-                time = datum.weekday() #Nummer des Tages in der Woche
-                datum = date.fromisocalendar(wochensplit[0] , wochensplit[1], 1) #Datum des Wochenbeginns
-            else: 
-                datum = linie[1].split("-")
-                monat = datum[0] + "-" + datum[1]
-                time = int(datum[2])
-            #Dictionary wird mit Zeug für Zeitstrahl gefüllt
-            if (ort,datum) in zeitDic:
-                values = zeitDic[(ort,datum)]
-                values[0] += wert
-                values[1] += 1
-                zeitDic[(ort,datum)] = values
-            else:
-                zeitDic[(ort,datum)] = [wert, 1]
-            #Dictionary wird mit Zeug für Verlauf gefüllt
-            if (ort,time) in verlaufDic:
-                values = verlaufDic[ort,time]
-                values[0] += wert
-                values[1] += 1
-                verlaufDic[ort,time] = values
-            else:
-                verlaufDic[ort,time] = [wert, 1]
+            if start <= datum and datum <= end:
+                gefiltert[ort, datum] = (ort, datum, float(wert))
+    return gefiltert
 
-    for ele in sorted(zeitDic):
-        values = zeitDic[ele]
-        avg = values[0] / values[1]
-        ort = str(ele[0])
-        datum = str(ele[1])
-        zeitstrahl.write(ort + "," + datum + "," + "%.3f" %avg + "\n")
+def zeitstrahlBerechnen(zeit, gefiltert):
+    #Berechnet die Werte für den Zeistrahl und den Tages/wochen/Monatsverlauf, indem die Daten jeweils in einem Dic gespeichert werden und dann der Mittelwert gebildet wird
+    #
+    zeitstrahl = {} 
+    verlauf = {}
+    zeitDic = {}
+    verlaufDic = {}
+    for item in gefiltert:
+        ele = gefiltert[item]
+        ort = ele[0]
+        datum = ele[1]
+        wert = ele[2]
+        if zeit == "Tag":
+            time = ele[1].hour
+            datum = datetime.datetime(datum.year,datum.month,datum.day)
+        elif zeit == "Woche":
+            wochensplit = datum.isocalendar() # Jahr, Wochennummer, Tag
+            wochentag = calendar.day_name[datum.weekday()] #Name des Wochentags -> Samstag
+            time = datum.weekday() #Nummer des Tages in der Woche
+            datum = date.fromisocalendar(wochensplit[0] , wochensplit[1], 1) #Datum des Wochenbeginns
+        else: 
+            time = datum.month
+            datum = datetime.date(datum.year,datum.month, 1)
+        #Dictionary wird mit Zeug für Zeitstrahl gefüllt
+        if (ort,datum) in zeitDic:
+            values = zeitDic[ort,datum]
+            values[0] += wert
+            values[1] += 1
+            zeitDic[ort,datum] = values
+        else:
+            zeitDic[ort,datum] = [wert, 1]
+        #Dictionary wird mit Zeug für Verlauf gefüllt
+        if (ort,time) in verlaufDic:
+            values = verlaufDic[ort,time]
+            values[0] += wert
+            values[1] += 1
+            verlaufDic[ort,time] = values
+        else:
+            verlaufDic[ort,time] = [wert, 1]
     
-    for ele in sorted(verlaufDic):
-        values = verlaufDic[ele]
-        avg = values[0] / values[1]
-        ort = str(ele[0])
-        time = str(ele[1])
-        verlauf.write(ort + "," + time + "," + "%.3f" %avg + "\n")
 
-def kartenWerte():
+    for elem in sorted(zeitDic):
+        values = zeitDic[elem]
+        avg = values[0] / values[1]
+        ort = str(elem[0])
+        datum = str(elem[1])
+        zeitstrahl[datum,ort] = [ort, datum, round(avg, 3)]
+    
+    
+    for elem in sorted(verlaufDic):
+        values = verlaufDic[elem]
+        avg = values[0] / values[1]
+        ort = str(elem[0])
+        time = str(elem[1])
+        verlauf[time,ort] = [ort, time, round(avg, 3)]
+    #print(verlauf)
+    return [zeitstrahl,verlauf]
+    
+
+def kartenWerte(gefiltert):
     # Berechnet aus den Daten im Verlauf einen Mittelwert, damit die Karte nur aus einem Wert besteht
     #
-    kartenFile = open("./daten/karte.csv", "w")
-    kartenFile.write("Lat,Long,Ort,Durchschnitt\n")
-    with open("./daten/verlauf.csv", "r")  as file:
-        next(file)
-        dic = {}
-        for lines in file:
-            lines = lines.strip()
-            linie = lines.split(",")
-            ort = linie[0]
-            wert = float(linie[2])
-            if (ort) in dic:
-                values = dic[ort]
-                values[0] += wert
-                values[1] += 1
-                dic[ort] = values
-            else:
-                dic[ort] = [wert, 1]
+    #kartenFile = open("./daten/karte.csv", "w")
+    ergebnisDic = {}
+    dic = {}
+    for item in gefiltert:
+        ele = gefiltert[item]
+        ort = ele[0]
+        wert = ele[2]
+        if (ort) in dic:
+            values = dic[ort]
+            values[0] += wert
+            values[1] += 1
+            dic[ort] = values
+        else:
+            dic[ort] = [wert, 1]
 
     for ele in dic:
         values = dic[ele]
         avg = values[0] / values[1]
         if (ele == "Ciutadella"):
-            kartenFile.write("41.3864,2.1874," + str(ele) + "," + "%.3f" %avg + "\n")
+            ergebnisDic[ele] = ele, 41.3864,2.1874, round(avg, 3)
         elif (ele == "Eixample"):
-            kartenFile.write("41.3853,2.1538," + str(ele) + "," + "%.3f" %avg + "\n")
+            ergebnisDic[ele] = ele, 41.3853,2.1538, round(avg, 3)
         elif (ele == "Gràcia"):
-            kartenFile.write("41.3987,2.1534," + str(ele) + "," + "%.3f" %avg + "\n")
+            ergebnisDic[ele] = ele, 41.3987,2.1534, round(avg, 3)
         elif (ele == "Palau Reial"):
-            kartenFile.write("41.3875,2.1151," + str(ele) + "," + "%.3f" %avg + "\n")
+            ergebnisDic[ele] = ele, 41.3875,2.1151, round(avg, 3)
         elif (ele == "Poblenou"):
-            kartenFile.write("41.4039,2.2045," + str(ele) + "," + "%.3f" %avg + "\n")
+            ergebnisDic[ele] = ele, 41.4039,2.2045, round(avg, 3)
         elif (ele == "Sants"):
-            kartenFile.write("41.3788,2.1321," + str(ele) + "," + "%.3f" %avg + "\n")
+            ergebnisDic[ele] = ele, 41.3788,2.1321, round(avg, 3)
         elif (ele == "Vall Hebron"):
-            kartenFile.write("41.4261,2.148," + str(ele) + "," + "%.3f" %avg + "\n")
+            ergebnisDic[ele] = ele, 41.4261, 2.148, round(avg, 3)
         else:
             print("Error")
+    return ergebnisDic
 
 
 if __name__ == '__main__':

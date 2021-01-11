@@ -112,30 +112,22 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
     Input('datepicker', 'end_date')])
 def make_line_charts(zeit, schadstoff, start_date, end_date):
     filtern(schadstoff, start_date, end_date)
-    verlaufBerechnen(zeit)
+    zeitstrahlBerechnen(zeit)
     kartenWerte()
 
+    zeitstrahlQuelle = pd.read_csv("./daten/zeitstrahl.csv")
+    zeitstrahl = px.line(zeitstrahlQuelle, x = "Datum", y="Wert", color= "Ort")
+
+    verlaufQuelle = pd.read_csv("./daten/verlauf.csv")
+    zeitverlauf = px.line(verlaufQuelle, x="Zeit", y="Wert", color="Ort")
     if zeit == "Tag":
-        quelle = pd.read_csv("./daten/"+ schadstoff + "Tag.csv")
-        zeitstrahl = px.line(quelle, x = "Datum", y="Durchschnitt", title="Tagesschnitt", color= "Ort")
-        mitteTag = pd.read_csv("./daten/verlauf.csv")
-        zeitverlauf = px.line(mitteTag, x="Uhrzeit", y="Wert", color="Ort", title = "Durchschnittliche tägliche Luftbelastung vom " + start_date +" bis " + end_date)
         coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSort.csv")
-    elif zeit == "Woche":
-        quelle = pd.read_csv("./daten/"+ schadstoff + "Woche.csv")
-        zeitstrahl = px.line(quelle, x = "Wochenbeginn", y="Durchschnitt", title="Wochenschnitt", color= "Ort")
-        mitteWoche = pd.read_csv("./daten/verlauf.csv")
-        zeitverlauf = px.line(mitteWoche, x="Wochentag", y="Wert", color="Ort", title = "Durchschnittliche wöchentliche Luftbelastung im Zeitraum " + start_date +" bis " + end_date)
-        coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSortWoche.csv")
     else:
-        quelle = pd.read_csv("./daten/"+ schadstoff + "Monat.csv")
-        zeitstrahl = px.line(quelle, x = "Monat", y="Durchschnitt", title="Monatsschnitt", color= "Ort")
-        mitteMonat = pd.read_csv("./daten/verlauf.csv")
-        zeitverlauf = px.line(mitteMonat, x="Tag", y="Wert", color="Ort", title = "Durchschnittliche monatliche Luftbelastung im Zeitraum " + start_date +" bis " + end_date)
         coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSortWoche.csv")
-    zeitstrahl.update_layout(xaxis_range=[start_date,end_date])
+
     zeitstrahl.update_layout(height=300,margin={"r":0,"t":30,"l":30,"b":0},title_x=0.5)
     zeitverlauf.update_layout(height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
+
     if schadstoff == "CO":
         zeitverlauf.update_yaxes(title_text="<b>mg/m³</b>")
         zeitstrahl.update_yaxes(title_text="<b>mg/m³</b>")
@@ -195,105 +187,14 @@ def make_line_charts(zeit, schadstoff, start_date, end_date):
         className="six columns")
     )
     
-def verlaufBerechnen(zeitabschnitt):
-    #Die Funktion berechnet den Tages-Wochen-Monatsdurschnitt für den jeweilgen Zeitraum
-    #
-    if zeitabschnitt == "Tag":
-        with open("./daten/gefiltert.csv") as file:
-            tagout = open("./daten/verlauf.csv", "w")
-            tagout.write("Lat,Long,Ort,Uhrzeit,Wert\n")
-            next(file)
-            dic = {}
-            for lines in file:
-                lines = lines.strip()
-                linie = lines.split(",")
-                lat = linie[0]
-                lon = linie[1]
-                ort = linie[2]
-                datum = linie[3]
-                uhrzeit = datum.split(" ")[1]
-                wert = linie[4]
-                if wert != "NA":
-                    wert = float(wert)
-                    if (lat,lon,ort, uhrzeit) in dic:
-                        values = dic[(lat,lon,ort,uhrzeit)]
-                        values[0] += wert
-                        values[1] += 1
-                        dic[(lat,lon,ort,uhrzeit)] = values
-                    else:
-                        dic[(lat,lon,ort,uhrzeit)] = [wert, 1]
-        for ele in sorted(dic):
-            values = dic[ele]
-            avg = values[0] / values[1]
-            tagout.write(str(ele[0]) + "," + str(ele[1]) + "," + str(ele[2]) + "," + str(ele[3]) + "," + "%.3f" %avg + "\n")
-            
-    elif zeitabschnitt == "Woche":
-         with open("./daten/gefiltert.csv") as file:
-            tagout = open("./daten/verlauf.csv", "w")
-            tagout.write("Lat,Long,Ort,Wochentag,Wert\n")
-            next(file)
-            dic = {}
-            for lines in file:
-                lines = lines.strip()
-                linie = lines.split(",")
-                lat = linie[0]
-                lon = linie[1]
-                ort = linie[2]
-                wert = linie[4]
-                datum = linie[3].split(" ")[0]
-                datum = datum.split("-")
-                datum = datetime.datetime(int(datum[0]), int(datum[1]), int(datum[2]))
-                wochentag = calendar.day_name[datum.weekday()]
-                wochentagInt = datum.weekday()
-                if wert != "NA":
-                    wert = float(wert)
-                    if (wochentagInt,lat,lon,ort, wochentag) in dic:
-                        values = dic[(wochentagInt,lat,lon,ort,wochentag)]
-                        values[0] += wert
-                        values[1] += 1
-                        dic[(wochentagInt,lat,lon,ort,wochentag)] = values
-                    else:
-                        dic[(wochentagInt,lat,lon,ort,wochentag)] = [wert, 1]
-            for ele in sorted(dic):
-                values = dic[ele]
-                avg = values[0] / values[1]
-                tagout.write(str(ele[1]) + "," + str(ele[2]) + "," + str(ele[3]) + "," + str(ele[4]) + "," + "%.3f" %avg + "\n")
-    else:
-        with open("./daten/gefiltert.csv") as file:
-            tagout = open("./daten/verlauf.csv", "w")
-            tagout.write("Lat,Long,Ort,Tag,Wert\n")
-            next(file)
-            dic = {}
-            for lines in file:
-                lines = lines.strip()
-                linie = lines.split(",")
-                lat = linie[0]
-                lon = linie[1]
-                ort = linie[2]
-                wert = linie[4]
-                datum = linie[3].split(" ")[0]
-                tag = int(datum.split("-")[2])
-                if wert != "NA":
-                    wert = float(wert)
-                    if (lat,lon,ort,tag) in dic:
-                        values = dic[lat,lon,ort,tag]
-                        values[0] += wert
-                        values[1] += 1
-                        dic[lat,lon,ort,tag] = values
-                    else:
-                        dic[lat,lon,ort,tag] = [wert, 1]
-            for ele in sorted(dic):
-                values = dic[ele]
-                avg = values[0] / values[1]
-                tagout.write(str(ele[0]) + "," + str(ele[1]) + "," + str(ele[2]) + "," + str(ele[3]) + "," + "%.3f" %avg + "\n")
-    tagout.close()
+
                 
 
 def filtern(schadstoff, start, end):
     #Öffnet das zum Schadstoff passende File und entfernt alle Linien, die nicht im Datumsrange liegen. Speichert diese in gefiltert
     #
     output = open("./daten/gefiltert.csv", "w")
-    output.write("Lat,Long,Ort,Datum,Wert\n")
+    output.write("Ort,Datum,Wert\n")
     start = datetime.datetime(int(start[:4]),int(start[5:7]),int(start[8:10]))
     end = datetime.datetime(int(end[:4]),int(end[5:7]),int(end[8:10]))
     with open("./daten/" + schadstoff + ".csv") as file:
@@ -301,13 +202,78 @@ def filtern(schadstoff, start, end):
         for lines in file:
             lines = lines.strip()
             linie = lines.split(",")
-            datum = linie[3].split(" ")[0]
+            datum = linie[1].split(" ")[0]
             datum = datum.split("-")
             datum = datetime.datetime(int(datum[0]), int(datum[1]), int(datum[2]))
             if start <= datum and datum <= end:
                 output.write(lines + "\n")
 
+def zeitstrahlBerechnen(zeit):
+    #Berechnet die Werte für den Zeistrahl und den Tages/wochen/Monatsverlauf, indem die Daten jeweils in einem Dic gespeichert werden und dann der Mittelwert gebildet wird
+    #
+    zeitstrahl = open("./daten/zeitstrahl.csv", "w")
+    zeitstrahl.write("Ort,Datum,Wert\n") 
+    verlauf = open("./daten/verlauf.csv", "w")
+    verlauf.write("Ort,Zeit,Wert\n")
+    file = open("./daten/gefiltert.csv")
+    zeitDic = {}
+    verlaufDic = {}
+    next(file)
+    for lines in file:
+        lines = lines.strip()
+        linie = lines.split(",")
+        ort = linie[0]
+        wert = linie[2]
+        if wert != "NA":
+            wert = float(wert)
+            if zeit == "Tag":
+                datum = linie[1].split(" ")[0]
+                time = linie[1].split(" ")[1]
+            elif zeit == "Woche":
+                datum = linie[1].split(" ")[0].split("-")
+                datum = datetime.datetime(int(datum[0]), int(datum[1]), int(datum[2])) # Formatiert Datum ins ISO-Format
+                wochensplit = datum.isocalendar() # Jahr, Wochennummer, Tag
+                wochentag = calendar.day_name[datum.weekday()] #Name des Wochentags -> Samstag
+                time = datum.weekday() #Nummer des Tages in der Woche
+                datum = date.fromisocalendar(wochensplit[0] , wochensplit[1], 1) #Datum des Wochenbeginns
+            else: 
+                datum = linie[1].split("-")
+                monat = datum[0] + "-" + datum[1]
+                time = int(datum[2])
+            #Dictionary wird mit Zeug für Zeitstrahl gefüllt
+            if (ort,datum) in zeitDic:
+                values = zeitDic[(ort,datum)]
+                values[0] += wert
+                values[1] += 1
+                zeitDic[(ort,datum)] = values
+            else:
+                zeitDic[(ort,datum)] = [wert, 1]
+            #Dictionary wird mit Zeug für Verlauf gefüllt
+            if (ort,time) in verlaufDic:
+                values = verlaufDic[ort,time]
+                values[0] += wert
+                values[1] += 1
+                verlaufDic[ort,time] = values
+            else:
+                verlaufDic[ort,time] = [wert, 1]
+
+    for ele in sorted(zeitDic):
+        values = zeitDic[ele]
+        avg = values[0] / values[1]
+        ort = str(ele[0])
+        datum = str(ele[1])
+        zeitstrahl.write(ort + "," + datum + "," + "%.3f" %avg + "\n")
+    
+    for ele in sorted(verlaufDic):
+        values = verlaufDic[ele]
+        avg = values[0] / values[1]
+        ort = str(ele[0])
+        time = str(ele[1])
+        verlauf.write(ort + "," + time + "," + "%.3f" %avg + "\n")
+
 def kartenWerte():
+    # Berechnet aus den Daten im Verlauf einen Mittelwert, damit die Karte nur aus einem Wert besteht
+    #
     kartenFile = open("./daten/karte.csv", "w")
     kartenFile.write("Lat,Long,Ort,Durchschnitt\n")
     with open("./daten/verlauf.csv", "r")  as file:
@@ -316,23 +282,35 @@ def kartenWerte():
         for lines in file:
             lines = lines.strip()
             linie = lines.split(",")
-            lat = linie[0]
-            lon = linie[1]
-            ort = linie[2]
-            wert = float(linie[4])
-            if (lat,lon,ort) in dic:
-                values = dic[lat,lon,ort]
+            ort = linie[0]
+            wert = float(linie[2])
+            if (ort) in dic:
+                values = dic[ort]
                 values[0] += wert
                 values[1] += 1
-                dic[lat,lon,ort] = values
+                dic[ort] = values
             else:
-                dic[lat,lon,ort] = [wert, 1]
+                dic[ort] = [wert, 1]
 
     for ele in dic:
         values = dic[ele]
         avg = values[0] / values[1]
-        kartenFile.write(str(ele[0]) + "," + str(ele[1]) + "," + str(ele[2]) + "," + "%.3f" %avg + "\n")
-
+        if (ele == "Ciutadella"):
+            kartenFile.write("41.3864,2.1874," + str(ele) + "," + "%.3f" %avg + "\n")
+        elif (ele == "Eixample"):
+            kartenFile.write("41.3853,2.1538," + str(ele) + "," + "%.3f" %avg + "\n")
+        elif (ele == "Gràcia"):
+            kartenFile.write("41.3987,2.1534," + str(ele) + "," + "%.3f" %avg + "\n")
+        elif (ele == "Palau Reial"):
+            kartenFile.write("41.3875,2.1151," + str(ele) + "," + "%.3f" %avg + "\n")
+        elif (ele == "Poblenou"):
+            kartenFile.write("41.4039,2.2045," + str(ele) + "," + "%.3f" %avg + "\n")
+        elif (ele == "Sants"):
+            kartenFile.write("41.3788,2.1321," + str(ele) + "," + "%.3f" %avg + "\n")
+        elif (ele == "Vall Hebron"):
+            kartenFile.write("41.4261,2.148," + str(ele) + "," + "%.3f" %avg + "\n")
+        else:
+            print("Error")
 
 
 if __name__ == '__main__':

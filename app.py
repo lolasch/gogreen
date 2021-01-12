@@ -57,6 +57,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                 'text-align': 'center'
         },children = [   
 
+            # Radio mit Auswahlmöglichkeit für Luftverschmutzungsart
             dcc.RadioItems(        
             style={
                 'textAlign': 'center',
@@ -75,6 +76,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
             value='NO2',
             labelStyle={'display': 'inline-block'}
         ),
+        # Radio mit Auswahlmöglichkeit für Tag/Woche/Monat
         dcc.RadioItems(
             style={
                 'textAlign': 'center',
@@ -89,11 +91,16 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
             value='Woche',
             labelStyle={'display': 'inline-block'}
         ),
+        #Auswahlmöglichkeit für Zeit
         dcc.DatePickerRange(
             style={
                 'color': colors['text']
             },  
             id='datepicker',
+            display_format='DD.MM.Y',
+            number_of_months_shown = 6,
+            updatemode = 'bothdates',
+            with_portal = True,
             min_date_allowed=date(2019, 4, 1),
             max_date_allowed=date(2020, 12, 31),
             initial_visible_month=date(2019, 4, 1),
@@ -139,18 +146,19 @@ def make_line_charts(zeit, schadstoff, start_date, end_date):
         zeitstrahl.update_yaxes(title_text="<b>µg/m³</b>")
     corona = make_subplots(specs=[[{"secondary_y": True}]])
     corona.add_trace(
-        go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Faelle, name="yaxis data"),
+        go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Faelle, name="Falldaten"),
         secondary_y=False,
     )
     corona.add_trace(
-        go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Tote, name="yaxis2 data"),secondary_y=True,
+        go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Tote, name="Tode"),secondary_y=True,
     )
 
     corona.update_layout(title_text="Corona-Inzidenzzahlen",showlegend=False,height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
     corona.update_xaxes(title_text="Zeit")
-    corona.update_yaxes(title_text="<b>Fallzahlen</b> absolut", secondary_y=False, title_font=dict(color="red"))
-    corona.update_yaxes(title_text="<b>Tote</b> absolut", secondary_y=True,title_font=dict(color="blue"))
+    corona.update_yaxes(title_text="<b>Fallzahlen</b> absolut", secondary_y=False, title_font=dict(color="blue"))
+    corona.update_yaxes(title_text="<b>Tote</b> absolut", secondary_y=True,title_font=dict(color="red"))
     #corona.update_layout(xaxis_range=[start_date,end_date])
+    #corona.update_xaxes(rangeslider_visible=True)
 
 
     karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), color = "Ort", lat="Lat", lon="Long", zoom=11, height=300, width=870, size = "Durchschnitt")
@@ -279,7 +287,6 @@ def zeitstrahlBerechnen(zeit, gefiltert):
 def kartenWerte(gefiltert):
     # Berechnet aus den Daten im Verlauf einen Mittelwert, damit die Karte nur aus einem Wert besteht
     #
-    #kartenFile = open("./daten/karte.csv", "w")
     ergebnisDic = {}
     dic = {}
     for item in gefiltert:

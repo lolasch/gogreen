@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 from datetime import date
-import time
+#import time
 import calendar
 import datetime
 from dash.dependencies import Input, Output
@@ -118,7 +118,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
     Input('datepicker', 'start_date'),
     Input('datepicker', 'end_date')])
 def make_line_charts(zeit, schadstoff, start_date, end_date):
-    start = time.time()
+    #start = time.time()
     gefiltert = filtern(schadstoff, start_date, end_date)
     abc = zeitstrahlBerechnen(zeit, gefiltert)
     zeitstrahl = abc[0]
@@ -128,14 +128,15 @@ def make_line_charts(zeit, schadstoff, start_date, end_date):
     zeitstrahlQuelle = pd.DataFrame.from_dict(zeitstrahl ,orient='index', columns = ["Ort","Datum","Wert"])
     zeitstrahl = px.line(zeitstrahlQuelle, x = "Datum", y="Wert", color= "Ort")
 
-    verlaufQuelle = pd.DataFrame.from_dict(verlauf ,orient='index', columns = ["Ort","Datum","Wert"])
-    zeitverlauf = px.line(verlaufQuelle, x="Datum", y="Wert", color="Ort")
+    verlaufQuelle = pd.DataFrame.from_dict(verlauf ,orient='index', columns = ["Ort","Datum","Zeit","Wert"])
+    zeitverlauf = px.line(verlaufQuelle, x="Zeit", y="Wert", color="Ort")
     if zeit == "Tag":
         coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSort.csv")
     else:
         coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSortWoche.csv")
 
     zeitstrahl.update_layout(height=300,margin={"r":0,"t":30,"l":30,"b":0},title_x=0.5)
+    zeitstrahl.update_layout(clickmode='event+select')
     zeitverlauf.update_layout(height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
 
     if schadstoff == "CO":
@@ -153,7 +154,7 @@ def make_line_charts(zeit, schadstoff, start_date, end_date):
         go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Tote, name="Tode"),secondary_y=True,
     )
 
-    corona.update_layout(title_text="Corona-Inzidenzzahlen",showlegend=False,height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
+    corona.update_layout(title_text="Corona-Inzidenzzahlen in Barcelona",showlegend=False,height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
     corona.update_xaxes(title_text="Zeit")
     corona.update_yaxes(title_text="<b>Fallzahlen</b> absolut", secondary_y=False, title_font=dict(color="blue"))
     corona.update_yaxes(title_text="<b>Tote</b> absolut", secondary_y=True,title_font=dict(color="red"))
@@ -165,8 +166,8 @@ def make_line_charts(zeit, schadstoff, start_date, end_date):
     karte.update_layout(mapbox_style="open-street-map",showlegend=False)
     karte.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
 
-    end = time.time()
-    print(end - start)
+    #end = time.time()
+    #print(end - start)
     return (
         html.Div([
                 html.H3('Karte'),
@@ -240,14 +241,16 @@ def zeitstrahlBerechnen(zeit, gefiltert):
         if zeit == "Tag":
             time = ele[1].hour
             datum = datetime.datetime(datum.year,datum.month,datum.day)
+            xaxis = str(time).zfill(2) + ":00"
         elif zeit == "Woche":
             wochensplit = datum.isocalendar() # Jahr, Wochennummer, Tag
-            wochentag = calendar.day_name[datum.weekday()] #Name des Wochentags -> Samstag
+            xaxis = calendar.day_name[datum.weekday()] #Name des Wochentags -> Samstag
             time = datum.weekday() #Nummer des Tages in der Woche
             datum = date.fromisocalendar(wochensplit[0] , wochensplit[1], 1) #Datum des Wochenbeginns
         else: 
-            time = datum.month
+            time = datum.day
             datum = datetime.date(datum.year,datum.month, 1)
+            xaxis = time
         #Dictionary wird mit Zeug für Zeitstrahl gefüllt
         if (ort,datum) in zeitDic:
             values = zeitDic[ort,datum]
@@ -257,13 +260,13 @@ def zeitstrahlBerechnen(zeit, gefiltert):
         else:
             zeitDic[ort,datum] = [wert, 1]
         #Dictionary wird mit Zeug für Verlauf gefüllt
-        if (ort,time) in verlaufDic:
-            values = verlaufDic[ort,time]
+        if (ort,time,xaxis) in verlaufDic:
+            values = verlaufDic[ort,time,xaxis]
             values[0] += wert
             values[1] += 1
-            verlaufDic[ort,time] = values
+            verlaufDic[ort,time,xaxis] = values
         else:
-            verlaufDic[ort,time] = [wert, 1]
+            verlaufDic[ort,time,xaxis] = [wert, 1]
     
 
     for elem in sorted(zeitDic):
@@ -279,7 +282,8 @@ def zeitstrahlBerechnen(zeit, gefiltert):
         avg = values[0] / values[1]
         ort = str(elem[0])
         time = str(elem[1])
-        verlauf[time,ort] = [ort, time, round(avg, 3)]
+        xaxis = str(elem[2])
+        verlauf[time,ort] = [ort,time,xaxis,round(avg, 3)]
     #print(verlauf)
     return [zeitstrahl,verlauf]
     

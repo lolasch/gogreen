@@ -37,6 +37,9 @@ def main():
     gefiltert = filtern("NO2", "2019-04-01", "2020-12-31")
     global kartenDic
     kartenDic = kartenWerte(gefiltert)
+    karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", lon="Long", zoom=11, height=300, width=870, size = "Durchschnitt", hover_name="Ort",)
+    karte.update_layout(mapbox_style="open-street-map",showlegend=False)
+    karte.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
 
 app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
     

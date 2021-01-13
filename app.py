@@ -21,6 +21,7 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.title = 'Go Green'
 
+
 server = app.server
 
 
@@ -31,8 +32,11 @@ colors = {
 
 # assume you have a "long-form" data frame
 # see https://plotly.com/python/px-arguments/ for more options
-
-
+def main():
+    global gefiltert 
+    gefiltert = filtern("NO2", "2019-04-01", "2020-12-31")
+    global kartenDic
+    kartenDic = kartenWerte(gefiltert)
 
 app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
     
@@ -56,7 +60,6 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                 'margin-right': 'auto',
                 'text-align': 'center'
         },children = [   
-
             # Radio mit Auswahlmöglichkeit für Luftverschmutzungsart
             dcc.RadioItems(        
             style={
@@ -75,68 +78,124 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
             ],
             value='NO2',
             labelStyle={'display': 'inline-block'}
-        ),
-        # Radio mit Auswahlmöglichkeit für Tag/Woche/Monat
-        dcc.RadioItems(
-            style={
-                'textAlign': 'center',
-                'color': colors['text']
-            }, 
-            id="zeitabschnitt",
-            options=[        
-                {'label': 'Tage', 'value': 'Tag'},
-                {'label': 'Woche', 'value': 'Woche'},
-                {'label': 'Monat', 'value': 'Monat'}
-            ],
-            value='Woche',
-            labelStyle={'display': 'inline-block'}
-        ),
-        #Auswahlmöglichkeit für Zeit
-        dcc.DatePickerRange(
-            style={
-                'color': colors['text']
-            },  
-            id='datepicker',
-            display_format='DD.MM.Y',
-            number_of_months_shown = 6,
-            updatemode = 'bothdates',
-            with_portal = True,
-            min_date_allowed=date(2019, 4, 1),
-            max_date_allowed=date(2020, 12, 31),
-            initial_visible_month=date(2019, 4, 1),
-            start_date=date(2019, 4, 1),
-            end_date=date(2020, 12, 31)
-        ),
-        html.Div(id='time'), 
+            ),
+            # Radio mit Auswahlmöglichkeit für Tag/Woche/Monat
+            dcc.RadioItems(
+                style={
+                    'textAlign': 'center',
+                    'color': colors['text']
+                }, 
+                id="zeitabschnitt",
+                options=[        
+                    {'label': 'Tage', 'value': 'Tag'},
+                    {'label': 'Woche', 'value': 'Woche'},
+                    {'label': 'Monat', 'value': 'Monat'}
+                ],
+                value='Tag',
+                labelStyle={'display': 'inline-block'}
+            ),
+            #Auswahlmöglichkeit für Zeit
+            dcc.DatePickerRange(
+                style={
+                    'color': colors['text']
+                },  
+                id='datepicker',
+                display_format='DD.MM.Y',
+                number_of_months_shown = 6,
+                updatemode = 'bothdates',
+                with_portal = True,
+                min_date_allowed=date(2019, 4, 1),
+                max_date_allowed=date(2020, 12, 31),
+                initial_visible_month=date(2019, 4, 1),
+                start_date=date(2019, 4, 1),
+                end_date=date(2020, 12, 31)
+            )
+        ], className="row") ,
+        html.Div([
+            html.Div([
+                    html.H3('Karte'),
+                    html.Div(
+                        id='karteDiv',children = [
+                            dcc.Graph(
+                                id='g1', 
+                                
+                            ),
+                        ]
+                    ),
 
-    ], className="row")  
+                    html.Div(
+                        id = 'coronaDiv'    
+                )], className="six columns"),
+
+            html.Div([
+                html.H3('Zeitlicher Verlauf'),
+
+                html.Div(
+                    id = 'zeitstrahlDiv', 
+                ),
+                html.Div(
+                    id = 'zeitverlaufDiv',
+                ),
+            ],
+            className="six columns") ,
+            html.Div(id='dummy')
+        ]),
+    
 ])
 
-@app.callback(Output('time', 'children'),
+
+
+
+@app.callback([Output('coronaDiv', 'children'),
+    Output('zeitstrahlDiv', 'children'),
+    Output('zeitverlaufDiv', 'children')],
     [Input('zeitabschnitt', 'value'),
     Input('schadwert', 'value'),
     Input('datepicker', 'start_date'),
-    Input('datepicker', 'end_date')])
-def make_line_charts(zeit, schadstoff, start_date, end_date):
+    Input('datepicker', 'end_date'),
+    Input('g1', 'clickData')])
+def make_line_charts(zeit2, schadstoff, start_date, end_date,clickData):
     #start = time.time()
+    global zeit
+    zeit = zeit2 
     gefiltert = filtern(schadstoff, start_date, end_date)
     abc = zeitstrahlBerechnen(zeit, gefiltert)
-    zeitstrahl = abc[0]
+    zeitstrahlb = abc[0]
     verlauf = abc[1]
     kartenDic = kartenWerte(gefiltert)
 
-    zeitstrahlQuelle = pd.DataFrame.from_dict(zeitstrahl ,orient='index', columns = ["Ort","Datum","Wert"])
-    zeitstrahl = px.line(zeitstrahlQuelle, x = "Datum", y="Wert", color= "Ort")
+    zeitstrahlQuelle = pd.DataFrame.from_dict(zeitstrahlb ,orient='index', columns = ["Monat","Jahr","Wert"])
+    #zeitstrahl2020 = zeitstrahlQuelle.filter(like='2020', axis=0)
+    #zeitstrahl2019 = zeitstrahlQuelle.filter(like='2019', axis=0)
+    #zeitstrahlQuelle = zeitstrahlQuelle.filter("Jahr"=="2019")
+    zeitstrahl = px.line(zeitstrahlQuelle, x="Monat", y="Wert", color = "Jahr", color_discrete_sequence=['gray', 'blue'])
+    
+    
+    #zeitstrahl.add_trace(px.Scatter(x=zeitstrahl2020.Monat, y=zeitstrahl2020.Wert,line=dict(color="black"), name="2020")),
+    #zeitstrahl.add_trace(px.Scatter(x=zeitstrahl2019.Monat, y=zeitstrahl2019.Wert,line=dict(color="black"), name="2019"))
+    
+    zeitstrahl.update_layout(clickmode='event+select')  
 
-    verlaufQuelle = pd.DataFrame.from_dict(verlauf ,orient='index', columns = ["Ort","Datum","Zeit","Wert"])
-    zeitverlauf = px.line(verlaufQuelle, x="Zeit", y="Wert", color="Ort")
-    if zeit == "Tag":
-        coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSort.csv")
-    else:
-        coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSortWoche.csv")
+    if clickData != None:
+        ortsname = str(clickData['points'][0]['hovertext'])
+        orte = ortsWerteBerechnen(zeit, gefiltert)
+        ortQuelle = pd.DataFrame.from_dict(orte, orient='index', columns = ["Datum","Jahr","Ort","Wert"])
+        ortQuelle = ortQuelle[ortQuelle.Ort == ortsname]
+        ort2019 = ortQuelle.filter(like='2019', axis=0)
+        ort2020 = ortQuelle.filter(like='2020', axis=0)
+        ortFigure = px.line(ortQuelle, x="Datum", y="Wert", color = "Jahr", hover_name="Ort", labels = {}, color_discrete_sequence=['green', 'red'])
+        ortFigure.data[0].name = "2020 - " + ortsname
+        ortFigure.data[1].name = "2019 - " + ortsname
+        zeitstrahl = go.Figure(data = zeitstrahl.data + ortFigure.data)
+        #zeitstrahl.add_trace(go.Scatter(x=ort2019.Datum, y=ort2019.Wert, name = ortsname + " 2019"))
+        #zeitstrahl.add_trace(go.Scatter(x=ort2020.Datum, y=ort2020.Wert, name = ortsname + " 2020"))
+        #,line=dict(color="grey")
+        # = "abc"
 
     zeitstrahl.update_layout(height=300,margin={"r":0,"t":30,"l":30,"b":0},title_x=0.5)
-    zeitstrahl.update_layout(clickmode='event+select')
+    ###Zeitverlauf
+    verlaufQuelle = pd.DataFrame.from_dict(verlauf ,orient='index', columns = ["Datum","Jahr","Wert"])
+    zeitverlauf = px.line(verlaufQuelle, x="Datum", y="Wert", color = "Jahr") 
     zeitverlauf.update_layout(height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
 
     if schadstoff == "CO":
@@ -145,6 +204,11 @@ def make_line_charts(zeit, schadstoff, start_date, end_date):
     else: 
         zeitverlauf.update_yaxes(title_text="<b>µg/m³</b>")
         zeitstrahl.update_yaxes(title_text="<b>µg/m³</b>")
+
+    if zeit == "Tag":
+        coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSort.csv")
+    else:
+        coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSortWoche.csv")
     corona = make_subplots(specs=[[{"secondary_y": True}]])
     corona.add_trace(
         go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Faelle, name="Falldaten"),
@@ -162,47 +226,44 @@ def make_line_charts(zeit, schadstoff, start_date, end_date):
     #corona.update_xaxes(rangeslider_visible=True)
 
 
-    karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), color = "Ort", lat="Lat", lon="Long", zoom=11, height=300, width=870, size = "Durchschnitt")
-    karte.update_layout(mapbox_style="open-street-map",showlegend=False)
-    karte.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
-
-    #end = time.time()
-    #print(end - start)
-    return (
-        html.Div([
-                html.H3('Karte'),
-                html.Div(
-                    dcc.Graph(id='g1', figure=karte)
-                ),
-
-                html.Div(
-                    dcc.Graph(
-                        id="corona",
-                        figure=corona
-                )    
-            )], className="six columns"),
-
-        html.Div([
-            html.H3('Zeitlicher Verlauf'),
-
-            html.Div(
-                dcc.Graph(
-                    id="zeitstrahl",
-                    figure=zeitstrahl
-                )    
-            ),
-            html.Div(
-                dcc.Graph(
-                    id="zeitverlauf",
-                    figure=zeitverlauf
-                )    
-            )
-        ],
-        className="six columns")
-    )
     
 
-                
+    return (
+        dcc.Graph(
+            id="corona",
+            figure=corona
+        ),
+        dcc.Graph(
+            id="zeitstrahl",
+            figure = zeitstrahl
+        ), 
+        dcc.Graph(
+            id="zeitverlauf",
+            figure = zeitverlauf
+        ),
+    )
+
+@app.callback(Output('g1', 'figure'),
+        Input('schadwert', 'value'))
+def display_click_data(dummy):
+    karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", lon="Long", zoom=11, height=300, width=870, size = "Durchschnitt", hover_name="Ort",)
+    karte.update_layout(mapbox_style="open-street-map",showlegend=False)
+    karte.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
+    return karte
+
+"""
+@app.callback(
+    Output('zeitstrahlGraph', 'figure'),
+    )
+def display_click_data(clickData):
+    ortsname = str(clickData['points'][0]['hovertext'])
+    orte = ortsWerteBerechnen(zeit, gefiltert)
+    ortQuelle = pd.DataFrame.from_dict(orte, orient='index', columns = ["Datum","Jahr","Ort","Wert"])
+    ortQuelle = ortQuelle[ortQuelle.Ort == ortsname]
+    ort2019 = ortQuelle.filter(like='2019', axis=0)
+    #ort2020 = ortQuelle.filter(like='2020', axis=0)
+    return zeitstrahl.add_trace(go.Scatter(x=ort2019.Datum, y=ort2019.Wert,line=dict(color="red")))
+"""
 
 def filtern(schadstoff, start, end):
     #Öffnet das zum Schadstoff passende File und entfernt alle Linien, die nicht im Datumsrange liegen. Speichert diese in gefiltert
@@ -235,58 +296,90 @@ def zeitstrahlBerechnen(zeit, gefiltert):
     verlaufDic = {}
     for item in gefiltert:
         ele = gefiltert[item]
-        ort = ele[0]
         datum = ele[1]
         wert = ele[2]
+        jahr = datum.year
         if zeit == "Tag":
-            time = ele[1].hour
-            datum = datetime.datetime(datum.year,datum.month,datum.day)
-            xaxis = str(time).zfill(2) + ":00"
+            time = datum.hour
+            datum = datetime.datetime(2020,datum.month,datum.day)
         elif zeit == "Woche":
             wochensplit = datum.isocalendar() # Jahr, Wochennummer, Tag
-            xaxis = calendar.day_name[datum.weekday()] #Name des Wochentags -> Samstag
+            #xaxis = calendar.day_name[datum.weekday()] #Name des Wochentags -> Samstag
             time = datum.weekday() #Nummer des Tages in der Woche
-            datum = date.fromisocalendar(wochensplit[0] , wochensplit[1], 1) #Datum des Wochenbeginns
+            #datum = date.fromisocalendar(wochensplit[0] , wochensplit[1], 1) #Datum des Wochenbeginns
+            datum = wochensplit[1]
+            jahr = wochensplit[0]
         else: 
             time = datum.day
-            datum = datetime.date(datum.year,datum.month, 1)
-            xaxis = time
+            datum = datum.month
         #Dictionary wird mit Zeug für Zeitstrahl gefüllt
-        if (ort,datum) in zeitDic:
-            values = zeitDic[ort,datum]
+        if (datum, jahr) in zeitDic:
+            values = zeitDic[datum,jahr]
             values[0] += wert
             values[1] += 1
-            zeitDic[ort,datum] = values
+            zeitDic[datum,jahr] = values
         else:
-            zeitDic[ort,datum] = [wert, 1]
+            zeitDic[datum,jahr] = [wert,1]
         #Dictionary wird mit Zeug für Verlauf gefüllt
-        if (ort,time,xaxis) in verlaufDic:
-            values = verlaufDic[ort,time,xaxis]
+        if (time,jahr) in verlaufDic:
+            values = verlaufDic[time,jahr]
             values[0] += wert
             values[1] += 1
-            verlaufDic[ort,time,xaxis] = values
+            verlaufDic[time,jahr] = values
         else:
-            verlaufDic[ort,time,xaxis] = [wert, 1]
+            verlaufDic[time,jahr] = [wert, 1]
+    #print(verlaufDic)
     
 
     for elem in sorted(zeitDic):
         values = zeitDic[elem]
         avg = values[0] / values[1]
-        ort = str(elem[0])
-        datum = str(elem[1])
-        zeitstrahl[datum,ort] = [ort, datum, round(avg, 3)]
+        datum = str(elem[0])
+        jahr = str(elem[1])
+        zeitstrahl[datum,jahr] = [datum, jahr, round(avg, 3)]
     
     
     for elem in sorted(verlaufDic):
         values = verlaufDic[elem]
         avg = values[0] / values[1]
-        ort = str(elem[0])
-        time = str(elem[1])
-        xaxis = str(elem[2])
-        verlauf[time,ort] = [ort,time,xaxis,round(avg, 3)]
-    #print(verlauf)
+        time = str(elem[0])
+        jahr = str(elem[1])
+        verlauf[time, jahr] = [time,jahr,round(avg, 3)]
     return [zeitstrahl,verlauf]
     
+def ortsWerteBerechnen(zeit,gefiltert):
+    orte = {}
+    ortsDic={}
+    for item in gefiltert:
+        ele = gefiltert[item]
+        ort = ele[0]
+        datum = ele[1]
+        wert = ele[2]
+        jahr = datum.year
+        if zeit == "Tag":
+            datum = datetime.datetime(2020,datum.month,datum.day)
+        elif zeit == "Woche":
+            wochensplit = datum.isocalendar() # Jahr, Wochennummer, Tag
+            datum = wochensplit[1]
+            jahr = wochensplit[0]
+        else: 
+            datum = datum.month
+        
+        if (datum,jahr,ort) in orte:
+            values = orte[datum,jahr,ort]
+            values[0] += wert
+            values[1] += 1
+            orte[datum,jahr,ort] = values
+        else:
+            orte[datum,jahr,ort] = [wert,1]
+    for elem in sorted(orte):
+        values = orte[elem]
+        avg = values[0] / values[1]
+        datum = str(elem[0])
+        jahr = str(elem[1])
+        ort = str(elem[2])
+        ortsDic[datum,jahr,ort] = [datum, jahr, ort, round(avg, 3)]
+    return ortsDic
 
 def kartenWerte(gefiltert):
     # Berechnet aus den Daten im Verlauf einen Mittelwert, damit die Karte nur aus einem Wert besteht
@@ -328,4 +421,6 @@ def kartenWerte(gefiltert):
 
 
 if __name__ == '__main__':
+    main()
+    app.config.suppress_callback_exceptions = True
     app.run_server(debug=True,use_reloader=True)

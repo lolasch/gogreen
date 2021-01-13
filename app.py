@@ -32,14 +32,73 @@ colors = {
 
 # assume you have a "long-form" data frame
 # see https://plotly.com/python/px-arguments/ for more options
-def main():
-    global gefiltert 
-    gefiltert = filtern("NO2", "2019-04-01", "2020-12-31")
-    global kartenDic
-    kartenDic = kartenWerte(gefiltert)
-    karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", lon="Long", zoom=11, height=300, width=870, size = "Durchschnitt", hover_name="Ort",)
-    karte.update_layout(mapbox_style="open-street-map",showlegend=False)
-    karte.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
+def filtern(schadstoff, start, end):
+    #Öffnet das zum Schadstoff passende File und entfernt alle Linien, die nicht im Datumsrange liegen. Speichert diese in gefiltert
+    #
+    gefiltert = {}
+    start = datetime.datetime(int(start[:4]),int(start[5:7]),int(start[8:10]))
+    end = datetime.datetime(int(end[:4]),int(end[5:7]),int(end[8:10]))
+    file = open("./daten/" + schadstoff + ".csv")
+    next(file)
+    for lines in file:
+        lines = lines.strip()
+        linie = lines.split(",")
+        ort = linie[0]
+        datum = linie[1].split(" ")
+        stunde = int(datum[1]) % 24
+        datum = datum[0].split("-")
+        datum = datetime.datetime(int(datum[0]),int(datum[1]),int(datum[2]),int(stunde))
+        wert = linie[2]
+        if wert != "NA":
+            if start <= datum and datum <= end:
+                gefiltert[ort, datum] = (ort, datum, float(wert))
+    return gefiltert
+
+def kartenWerte(gefiltert):
+    # Berechnet aus den Daten im Verlauf einen Mittelwert, damit die Karte nur aus einem Wert besteht
+    #
+    ergebnisDic = {}
+    dic = {}
+    for item in gefiltert:
+        ele = gefiltert[item]
+        ort = ele[0]
+        wert = ele[2]
+        if (ort) in dic:
+            values = dic[ort]
+            values[0] += wert
+            values[1] += 1
+            dic[ort] = values
+        else:
+            dic[ort] = [wert, 1]
+
+    for ele in dic:
+        values = dic[ele]
+        avg = values[0] / values[1]
+        if (ele == "Ciutadella"):
+            ergebnisDic[ele] = ele, 41.3864,2.1874, round(avg, 3)
+        elif (ele == "Eixample"):
+            ergebnisDic[ele] = ele, 41.3853,2.1538, round(avg, 3)
+        elif (ele == "Gràcia"):
+            ergebnisDic[ele] = ele, 41.3987,2.1534, round(avg, 3)
+        elif (ele == "Palau Reial"):
+            ergebnisDic[ele] = ele, 41.3875,2.1151, round(avg, 3)
+        elif (ele == "Poblenou"):
+            ergebnisDic[ele] = ele, 41.4039,2.2045, round(avg, 3)
+        elif (ele == "Sants"):
+            ergebnisDic[ele] = ele, 41.3788,2.1321, round(avg, 3)
+        elif (ele == "Vall Hebron"):
+            ergebnisDic[ele] = ele, 41.4261, 2.148, round(avg, 3)
+        else:
+            print("Error")
+    return ergebnisDic
+
+global gefiltert 
+gefiltert = filtern("NO2", "2019-04-01", "2020-12-31")
+global kartenDic
+kartenDic = kartenWerte(gefiltert)
+karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", lon="Long", zoom=11, height=300, width=870, size = "Durchschnitt", hover_name="Ort",)
+karte.update_layout(mapbox_style="open-street-map",showlegend=False)
+karte.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
 
 app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
     
@@ -268,27 +327,7 @@ def display_click_data(clickData):
     return zeitstrahl.add_trace(go.Scatter(x=ort2019.Datum, y=ort2019.Wert,line=dict(color="red")))
 """
 
-def filtern(schadstoff, start, end):
-    #Öffnet das zum Schadstoff passende File und entfernt alle Linien, die nicht im Datumsrange liegen. Speichert diese in gefiltert
-    #
-    gefiltert = {}
-    start = datetime.datetime(int(start[:4]),int(start[5:7]),int(start[8:10]))
-    end = datetime.datetime(int(end[:4]),int(end[5:7]),int(end[8:10]))
-    file = open("./daten/" + schadstoff + ".csv")
-    next(file)
-    for lines in file:
-        lines = lines.strip()
-        linie = lines.split(",")
-        ort = linie[0]
-        datum = linie[1].split(" ")
-        stunde = int(datum[1]) % 24
-        datum = datum[0].split("-")
-        datum = datetime.datetime(int(datum[0]),int(datum[1]),int(datum[2]),int(stunde))
-        wert = linie[2]
-        if wert != "NA":
-            if start <= datum and datum <= end:
-                gefiltert[ort, datum] = (ort, datum, float(wert))
-    return gefiltert
+
 
 def zeitstrahlBerechnen(zeit, gefiltert):
     #Berechnet die Werte für den Zeistrahl und den Tages/wochen/Monatsverlauf, indem die Daten jeweils in einem Dic gespeichert werden und dann der Mittelwert gebildet wird
@@ -384,46 +423,8 @@ def ortsWerteBerechnen(zeit,gefiltert):
         ortsDic[datum,jahr,ort] = [datum, jahr, ort, round(avg, 3)]
     return ortsDic
 
-def kartenWerte(gefiltert):
-    # Berechnet aus den Daten im Verlauf einen Mittelwert, damit die Karte nur aus einem Wert besteht
-    #
-    ergebnisDic = {}
-    dic = {}
-    for item in gefiltert:
-        ele = gefiltert[item]
-        ort = ele[0]
-        wert = ele[2]
-        if (ort) in dic:
-            values = dic[ort]
-            values[0] += wert
-            values[1] += 1
-            dic[ort] = values
-        else:
-            dic[ort] = [wert, 1]
-
-    for ele in dic:
-        values = dic[ele]
-        avg = values[0] / values[1]
-        if (ele == "Ciutadella"):
-            ergebnisDic[ele] = ele, 41.3864,2.1874, round(avg, 3)
-        elif (ele == "Eixample"):
-            ergebnisDic[ele] = ele, 41.3853,2.1538, round(avg, 3)
-        elif (ele == "Gràcia"):
-            ergebnisDic[ele] = ele, 41.3987,2.1534, round(avg, 3)
-        elif (ele == "Palau Reial"):
-            ergebnisDic[ele] = ele, 41.3875,2.1151, round(avg, 3)
-        elif (ele == "Poblenou"):
-            ergebnisDic[ele] = ele, 41.4039,2.2045, round(avg, 3)
-        elif (ele == "Sants"):
-            ergebnisDic[ele] = ele, 41.3788,2.1321, round(avg, 3)
-        elif (ele == "Vall Hebron"):
-            ergebnisDic[ele] = ele, 41.4261, 2.148, round(avg, 3)
-        else:
-            print("Error")
-    return ergebnisDic
 
 
 if __name__ == '__main__':
-    main()
     app.config.suppress_callback_exceptions = True
     app.run_server(debug=True,use_reloader=True)

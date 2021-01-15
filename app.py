@@ -100,34 +100,82 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                 value='Tag',
                 labelStyle={'display': 'inline-block'}
             ),
-            #Auswahlmöglichkeit für Zeit
-            dcc.DatePickerRange(
-                style={
-                    'color': colors['text']
-                },  
-                id='datepicker',
-                display_format='DD.MM.Y',
-                number_of_months_shown = 6,
-                updatemode = 'bothdates',
-                with_portal = True,
-                min_date_allowed=date(2019, 4, 1),
-                max_date_allowed=date(2020, 12, 31),
-                initial_visible_month=date(2019, 4, 1),
-                start_date=date(2019, 4, 1),
-                end_date=date(2020, 12, 31)
-            )
         ], className="row") ,
+                    html.Div(
+                style={
+                        'display' : 'block',
+                        'margin-left': 'auto',
+                        'margin-right': 'auto',
+                        'text-align': 'center',
+                        'width':'300px'
+                },children = [ 
+                    html.Div(children = [
+                        dcc.Dropdown(
+                            id='start',
+                            options=[
+                                {'label': 'Januar', 'value': '1'},
+                                {'label': 'Februar', 'value': '2'},
+                                {'label': 'März', 'value': '3'},
+                                {'label': 'April', 'value': '4'},
+                                {'label': 'Mai', 'value': '5'},
+                                {'label': 'Juni', 'value': '6'},
+                                {'label': 'Juli', 'value': '7'},
+                                {'label': 'August', 'value': '8'},
+                                {'label': 'September', 'value': '9'},
+                                {'label': 'Oktober', 'value': '10'},
+                                {'label': 'November', 'value': '11'},
+                                {'label': 'Dezember', 'value': '12'},
+                            ],
+                            value='1'
+                        ),
+                    ],className="six columns"),
+                    html.Div(children = [
+                        dcc.Dropdown(
+                            id='ende',
+                            options=[
+                                {'label': 'Januar', 'value': '1'},
+                                {'label': 'Februar', 'value': '2'},
+                                {'label': 'März', 'value': '3'},
+                                {'label': 'April', 'value': '4'},
+                                {'label': 'Mai', 'value': '5'},
+                                {'label': 'Juni', 'value': '6'},
+                                {'label': 'Juli', 'value': '7'},
+                                {'label': 'August', 'value': '8'},
+                                {'label': 'September', 'value': '9'},
+                                {'label': 'Oktober', 'value': '10'},
+                                {'label': 'November', 'value': '11'},
+                                {'label': 'Dezember', 'value': '12'}
+                            ],
+                            value='12'
+                        ),
+                    ],className="six columns"),
+                ], className="row" ),
+
         html.Div([
             html.Div([
                     html.H3('Karte'),
-                    html.Div(
-                        children = [
-                            dcc.Graph(
-                                id='g1'
-                            ),
-                        ]
-                    ),
-
+                    html.Div(style = {
+                            'height' : '300px',
+                            'display':'flex',
+                        },children=[
+                        
+                        html.Div(style = {
+                            'width' : '50%',
+                        },
+                            children = [
+                                dcc.Graph(
+                                    id='g1'
+                                ),
+                            ],className="flex-child"
+                        ),
+                        html.Div(style = {
+                            'width' : '50%',
+                            'padding' :'20px',
+                        },children=[
+                            html.H4('Infobox:'),
+                            html.Div(id='infobox')
+                        ],className="flex-child"),
+                    ],className="flex-container"),
                     html.Div(
                         children = [
                             dcc.Graph(
@@ -155,34 +203,34 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                 ),
             ],
             className="six columns") ,
-            html.Div(id='dummy')
         ]),
         html.Div(id='ortDiv', style={'display': 'none'})
     
 ])
 
 
-@app.callback([Output('g1', 'figure'),Output('corona', 'figure'),Output('zeitstrahl', 'figure'),Output('zeitverlauf', 'figure')],
-    [Input('zeitabschnitt', 'value'),Input('schadwert', 'value'),Input('datepicker', 'start_date'),Input('datepicker', 'end_date'),Input('ortDiv','children')])
-def mainCallback(zeit, schadstoff, start_date, end_date, ortKlick = None):
+@app.callback([Output('g1', 'figure'),Output('corona', 'figure'),Output('zeitstrahl', 'figure'),Output('zeitverlauf', 'figure'),Output('infobox', 'children')],
+    [Input('zeitabschnitt', 'value'),Input('schadwert', 'value'),Input('start','value'), Input('ende','value'),Input('ortDiv','children')])
+def mainCallback(zeit, schadstoff, start, ende, ortKlick = None):
     """ Wird immer getriggert, wenn was passiert. Sammelt alles und stellt das dann in den Outputs dar """
-    gefiltert = filtern(schadstoff, start_date, end_date)
+    gefiltert = filtern(schadstoff, int(start), int(ende))
     werteZeitstrahl, werteVerlauf = zeitstrahlBerechnen(zeit, gefiltert)
     werteStrahlOrt = ortsWerteBerechnen(zeit, gefiltert)
     werteVerlaufOrt = zeitverlaufOrt(zeit,gefiltert)
-    berechneteKarte = karteRendern(gefiltert)
+    berechneteKarte, kartenDic = karteRendern(gefiltert)
     zeitstrahl, zeitverlauf = zeitstrahlUndVerlaufRendern(schadstoff,werteZeitstrahl,werteVerlauf)
     zeitstrahl, zeitverlauf = orteHinzufuegen(werteStrahlOrt,werteVerlaufOrt,ortKlick,zeitstrahl,zeitverlauf)
     coronaFig = coronaRendern(zeit)
-    return (berechneteKarte,coronaFig,zeitstrahl,zeitverlauf)
+    infobox = infoboxErstellen(schadstoff,kartenDic, ortKlick)
+    return (berechneteKarte,coronaFig,zeitstrahl,zeitverlauf, infobox)
 
 def karteRendern(gefiltert):
     """Erstellt die Figure Karte mit dem Werten aus gefiltert und gibt diese zurück """
     kartenDic = kartenWerte(gefiltert)
-    karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", color = "Ort", lon="Long", zoom=11, height=300, width=870, size = "Durchschnitt", hover_name="Ort",)
+    karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", color = "Ort", lon="Long", zoom=11, height=300, size = "Durchschnitt", hover_name="Ort",)
     karte.update_layout(mapbox_style="open-street-map",showlegend=False)
     karte.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
-    return karte
+    return karte,kartenDic
 
 def coronaRendern(zeit):
     if zeit == "Tag":
@@ -265,13 +313,30 @@ def orteHinzufuegen(werteStrahlOrt, werteVerlaufOrt,ortKlick,zeitstrahl,zeitverl
         zeitverlauf.add_trace(go.Scatter(x=ortV2020.Monat, y=ortV2020.Wert, name = ortsname + " 2020"))
     return [zeitstrahl, zeitverlauf]
 
+def infoboxErstellen(schadstoff, kartenDic, ortKlick):
+    
+    summe = 0
+    for ele in kartenDic:
+        values = kartenDic[ele]
+        summe += float(values[3])
+    avg = summe/len(kartenDic)
+   
+    if ortKlick != None:
+        ort = json.loads(ortKlick)["Ort"]
+        ortsWert = kartenDic[ort][3]
+        return ("Der durchschnittliche Wert von allen Werten liegt bei "+ str(round(avg, 3)) + ". " +
+        "Der durchschnittliche Wert von " + str(ort) + " liegt bei " + str(ortsWert)
+        )
+    return ("Der durchschnittliche Wert von allen Werten liegt bei "+ str(round(avg, 3)))
+    
+
 
 def filtern(schadstoff, start, end):
     #Öffnet das zum Schadstoff passende File und entfernt alle Linien, die nicht im Datumsrange liegen. Speichert diese in gefiltert
     #
     gefiltert = {}
-    start = datetime.datetime(int(start[:4]),int(start[5:7]),int(start[8:10]))
-    end = datetime.datetime(int(end[:4]),int(end[5:7]),int(end[8:10]))
+    #start = datetime.datetime(int(start[:4]),int(start[5:7]),int(start[8:10]))
+    #end = datetime.datetime(int(end[:4]),int(end[5:7]),int(end[8:10]))
     file = open("./daten/" + schadstoff + ".csv")
     next(file)
     for lines in file:
@@ -281,10 +346,13 @@ def filtern(schadstoff, start, end):
         datum = linie[1].split(" ")
         stunde = int(datum[1]) % 24
         datum = datum[0].split("-")
-        datum = datetime.datetime(int(datum[0]),int(datum[1]),int(datum[2]),int(stunde))
+        jahr = int(datum[0])
+        monat = int(datum[1])
+        tag = int(datum[2])
         wert = linie[2]
         if wert != "NA":
-            if start <= datum and datum <= end:
+            if start <= monat and monat <= end:
+                datum = datetime.datetime(jahr, monat, tag,int(stunde))
                 gefiltert[ort, datum] = (ort, datum, float(wert))
     return gefiltert
 

@@ -10,18 +10,21 @@ import dash_html_components as html
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
-from datetime import date
+from datetime import date, datetime
 import json
+import linecache
 #import time
 import calendar
 import datetime
 from dash.dependencies import Input, Output
 from plotly.subplots import make_subplots
+from past.builtins import execfile
+
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-counter = 0
+#app.scripts.append_script({"external_url": "https://cdn.plot.ly/plotly-locale-de-latest.js"})
 app.title = 'Go Green'
 
 
@@ -44,169 +47,8 @@ colors = {
     #karte.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
         
 
-app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
-    
-    html.Img(style={
-        'width' : 250,
-        'display' : 'block',
-        'margin-left': 'auto',
-        'margin-right': 'auto',
-        'text-align': 'center'
-    },src=app.get_asset_url('gogreen.png')),
 
-    html.Div(children='Luftqualität während einer Pandemie.', style={
-        'textAlign': 'center',
-        'color': colors['text']
-    }),
-
-    html.Div(
-        style={
-                'display' : 'block',
-                'margin-left': 'auto',
-                'margin-right': 'auto',
-                'text-align': 'center'
-        },children = [   
-            # Radio mit Auswahlmöglichkeit für Luftverschmutzungsart
-            dcc.RadioItems(        
-            style={
-                'textAlign': 'center',
-                'color': colors['text']
-            },    
-            id="schadwert",
-            options=[      
-                {'label': 'CO', 'value': 'CO'},  
-                {'label': 'NO', 'value': 'NO'},
-                {'label': 'NO2', 'value': 'NO2'},
-                {'label': 'NOx', 'value': 'NOx'},
-                {'label': 'O3', 'value': 'O3'},
-                {'label': 'PM10', 'value': 'PM10'},
-                {'label': 'SO2', 'value': 'SO2'}
-            ],
-            value='NO2',
-            labelStyle={'display': 'inline-block'}
-            ),
-            # Radio mit Auswahlmöglichkeit für Tag/Woche/Monat
-            dcc.RadioItems(
-                style={
-                    'textAlign': 'center',
-                    'color': colors['text']
-                }, 
-                id="zeitabschnitt",
-                options=[        
-                    {'label': 'Tage', 'value': 'Tag'},
-                    {'label': 'Woche', 'value': 'Woche'},
-                    {'label': 'Monat', 'value': 'Monat'}
-                ],
-                value='Tag',
-                labelStyle={'display': 'inline-block'}
-            ),
-        ], className="row") ,
-                    html.Div(
-                style={
-                        'display' : 'block',
-                        'margin-left': 'auto',
-                        'margin-right': 'auto',
-                        'text-align': 'center',
-                        'width':'300px'
-                },children = [ 
-                    html.Div(children = [
-                        dcc.Dropdown(
-                            id='start',
-                            options=[
-                                {'label': 'Januar', 'value': '1'},
-                                {'label': 'Februar', 'value': '2'},
-                                {'label': 'März', 'value': '3'},
-                                {'label': 'April', 'value': '4'},
-                                {'label': 'Mai', 'value': '5'},
-                                {'label': 'Juni', 'value': '6'},
-                                {'label': 'Juli', 'value': '7'},
-                                {'label': 'August', 'value': '8'},
-                                {'label': 'September', 'value': '9'},
-                                {'label': 'Oktober', 'value': '10'},
-                                {'label': 'November', 'value': '11'},
-                                {'label': 'Dezember', 'value': '12'},
-                            ],
-                            value='1'
-                        ),
-                    ],className="six columns"),
-                    html.Div(children = [
-                        dcc.Dropdown(
-                            id='ende',
-                            options=[
-                                {'label': 'Januar', 'value': '1'},
-                                {'label': 'Februar', 'value': '2'},
-                                {'label': 'März', 'value': '3'},
-                                {'label': 'April', 'value': '4'},
-                                {'label': 'Mai', 'value': '5'},
-                                {'label': 'Juni', 'value': '6'},
-                                {'label': 'Juli', 'value': '7'},
-                                {'label': 'August', 'value': '8'},
-                                {'label': 'September', 'value': '9'},
-                                {'label': 'Oktober', 'value': '10'},
-                                {'label': 'November', 'value': '11'},
-                                {'label': 'Dezember', 'value': '12'}
-                            ],
-                            value='12'
-                        ),
-                    ],className="six columns"),
-                ], className="row" ),
-
-        html.Div([
-            html.Div([
-                    html.H3('Karte'),
-                    html.Div(style = {
-                            'height' : '300px',
-                            'display':'flex',
-                        },children=[
-                        
-                        html.Div(style = {
-                            'width' : '50%',
-                        },
-                            children = [
-                                dcc.Graph(
-                                    id='g1'
-                                ),
-                            ],className="flex-child"
-                        ),
-                        html.Div(style = {
-                            'width' : '50%',
-                            'padding' :'20px',
-                        },children=[
-                            html.H4('Infobox:'),
-                            html.Div(id='infobox')
-                        ],className="flex-child"),
-                    ],className="flex-container"),
-                    html.Div(
-                        children = [
-                            dcc.Graph(
-                                id="corona",
-                            ),
-                        ] 
-                )], className="six columns"),
-
-            html.Div([
-                html.H3('Zeitlicher Verlauf'),
-
-                html.Div( 
-                    children = [
-                        dcc.Graph(
-                            id="zeitstrahl",
-                        ),
-                    ] 
-                ),
-                html.Div(
-                    children = [
-                        dcc.Graph(
-                            id="zeitverlauf",
-                        ),
-                    ] 
-                ),
-            ],
-            className="six columns") ,
-        ]),
-        html.Div(id='ortDiv', style={'display': 'none'})
-    
-])
+execfile('layout1.py')
 
 
 @app.callback([Output('g1', 'figure'),Output('corona', 'figure'),Output('zeitstrahl', 'figure'),Output('zeitverlauf', 'figure'),Output('infobox', 'children')],
@@ -218,18 +60,18 @@ def mainCallback(zeit, schadstoff, start, ende, ortKlick = None):
     werteStrahlOrt = ortsWerteBerechnen(zeit, gefiltert)
     werteVerlaufOrt = zeitverlaufOrt(zeit,gefiltert)
     berechneteKarte, kartenDic = karteRendern(gefiltert)
-    zeitstrahl, zeitverlauf = zeitstrahlUndVerlaufRendern(schadstoff,werteZeitstrahl,werteVerlauf)
+    zeitstrahl, zeitverlauf = zeitstrahlUndVerlaufRendern(zeit, schadstoff,werteZeitstrahl,werteVerlauf, start, ende)
     zeitstrahl, zeitverlauf = orteHinzufuegen(werteStrahlOrt,werteVerlaufOrt,ortKlick,zeitstrahl,zeitverlauf)
     coronaFig = coronaRendern(zeit)
-    infobox = infoboxErstellen(schadstoff,kartenDic, ortKlick)
+    infobox = infoboxErstellen(schadstoff,kartenDic, ortKlick, start,ende)
     return (berechneteKarte,coronaFig,zeitstrahl,zeitverlauf, infobox)
 
 def karteRendern(gefiltert):
     """Erstellt die Figure Karte mit dem Werten aus gefiltert und gibt diese zurück """
     kartenDic = kartenWerte(gefiltert)
-    karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", color = "Ort", lon="Long", zoom=11, height=300, size = "Durchschnitt", hover_name="Ort",)
+    karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", color = "Ort", lon="Long", zoom=11, height=300, size = "Durchschnitt", hover_name="Ort",title="<b>Karte von Barcelona</b>")
     karte.update_layout(mapbox_style="open-street-map",showlegend=False)
-    karte.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
+    karte.update_layout(margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
     return karte,kartenDic
 
 def coronaRendern(zeit):
@@ -237,21 +79,22 @@ def coronaRendern(zeit):
         coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSort.csv") #Fälle nach Tagen 
     else:
         coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSortWoche.csv") #Fälle nach Wochen
-    corona = make_subplots(specs=[[{"secondary_y": True}]])
-    corona.add_trace(
-        go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Faelle, name="Falldaten"), # Linke Achse -> Fälle
-        secondary_y=False,
-    )
-    corona.add_trace(
-        go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Tote, name="Tode"),secondary_y=True, # Rechte Achse -> Tode
-    )
+    sub = make_subplots(rows=4, cols=1, shared_xaxes=True, specs = [[{"secondary_y": True, "rowspan": 3}],[None],[None],[{"secondary_y": False}]])
+    sub.add_trace(go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Faelle, name="Falldaten"),row=1, col=1, secondary_y=False)# Linke Achse -> Fälle
+    sub.add_trace(go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Tote, name="Tode"),row=1, col=1, secondary_y=True,) # Rechte Achse -> Tode
+    
 
-    corona.update_layout(title_text="Corona-Inzidenzzahlen in Barcelona",showlegend=False,height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
-    corona.update_xaxes(title_text="Zeit")
-    corona.update_yaxes(title_text="<b>Fallzahlen</b> absolut", secondary_y=False, title_font=dict(color="blue"))
-    corona.update_yaxes(title_text="<b>Tode</b> absolut", secondary_y=True,title_font=dict(color="red"))
+    massnahmenQuelle = pd.read_csv("./daten/maßnahmen.csv")
+    sub.append_trace(go.Scatter(x = massnahmenQuelle.Datum, y = massnahmenQuelle.Wert, mode = 'lines+markers', hovertext = massnahmenQuelle.Ereignis),row=4, col=1)
+    
 
-    return corona
+    sub.update_layout(title_text="<b>Corona-Inzidenzzahlen in Barcelona</b>",showlegend=False,height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
+    sub.update_xaxes(title_text="Zeit")
+    sub.update_yaxes(title_text="<b>Fallzahlen</b> absolut", secondary_y=False, title_font=dict(color="blue"), row=1, col=1)
+    sub.update_yaxes(title_text="<b>Tode</b> absolut", secondary_y=True,title_font=dict(color="red"))
+    sub.update_yaxes(title_text="<b>Ereignisse</b>" ,tickvals=["Ereignis"], visible = True, row= 4, col = 1)
+
+    return sub
 
 
 @app.callback(Output('ortDiv','children'), Input('g1','clickData'))
@@ -264,21 +107,20 @@ def klickSpeichern(klick):
     else:
         return None
 
-def zeitstrahlUndVerlaufRendern(schadstoff, werteZeitstrahl, werteVerlauf):
+def zeitstrahlUndVerlaufRendern(zeit, schadstoff, werteZeitstrahl, werteVerlauf, start, ende):
     """Bekommt den Schadstoff (zur Achsenbeschriftung) und die Werte für Zeitstrahl und Verlauf. Returnt zwei Figs damit"""
-
     zeitstrahlQuelle = pd.DataFrame.from_dict(werteZeitstrahl ,orient='index', columns = ["Monat","Jahr","Wert"])
-    verlaufQuelle = pd.DataFrame.from_dict(werteVerlauf ,orient='index', columns = ["Datum","Jahr","Wert"])
+    verlaufQuelle = pd.DataFrame.from_dict(werteVerlauf ,orient='index', columns = ["Datum","Jahr","x-Achse","Wert"])
     #zeitstrahl2020 = zeitstrahlQuelle.filter(like='2020', axis=0)
     #zeitstrahl2019 = zeitstrahlQuelle.filter(like='2019', axis=0)
     #zeitstrahlQuelle = zeitstrahlQuelle.filter("Jahr"=="2019")
     zeitstrahl = px.line(zeitstrahlQuelle, x="Monat", y="Wert", color = "Jahr", color_discrete_sequence=[ 'blue','gray'])
-    zeitverlauf = px.line(verlaufQuelle, x="Datum", y="Wert", color = "Jahr", color_discrete_sequence=['orange', 'pink']) 
+    zeitverlauf = px.line(verlaufQuelle, x="x-Achse", y="Wert", color = "Jahr", color_discrete_sequence=['orange', 'pink']) 
 
     #zeitstrahl.add_trace(px.Scatter(x=zeitstrahl2020.Monat, y=zeitstrahl2020.Wert,line=dict(color="black"), name="2020")),
     #zeitstrahl.add_trace(px.Scatter(x=zeitstrahl2019.Monat, y=zeitstrahl2019.Wert,line=dict(color="black"), name="2019"))
-    zeitstrahl.update_layout(height=300,margin={"r":0,"t":30,"l":30,"b":0},title_x=0.5)
-    zeitverlauf.update_layout(height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
+    zeitstrahl.update_layout(height=300,margin={"r":0,"t":50,"l":30,"b":20},title_x=0.5)
+    zeitverlauf.update_layout(height=300,margin={"r":0,"t":50,"l":30,"b":0},title_x=0.5)
 
     if schadstoff == "CO":
         zeitverlauf.update_yaxes(title_text="<b>mg/m³</b>")
@@ -286,6 +128,25 @@ def zeitstrahlUndVerlaufRendern(schadstoff, werteZeitstrahl, werteVerlauf):
     else: 
         zeitverlauf.update_yaxes(title_text="<b>µg/m³</b>")
         zeitstrahl.update_yaxes(title_text="<b>µg/m³</b>")
+    start = calendar.month_name[int(start)]
+    ende = calendar.month_name[int(ende)]
+    if zeit == "Tag":        
+        zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher täglicher Verlauf zwischen %s und %s</b>" % (start, ende),title_x=0.5)
+        zeitverlauf.update_xaxes(title_text = "Uhrzeit")
+        zeitstrahl.update_layout(title_text = "<b>Täglicher Verlauf von %s bis %s</b>" % (start, ende),title_x=0.5)
+        zeitstrahl.update_xaxes(title_text = "Datum")
+    elif zeit == "Woche":
+        zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher wöchentlicher Verlauf zwischen %s und %s</b>" % (start, ende),title_x=0.5)
+        zeitverlauf.update_xaxes(title_text = "Tag in der Woche")
+        zeitstrahl.update_layout(title_text = "<b>Wöchentlicher Verlauf von %s bis %s</b>" % (start, ende),title_x=0.5)
+        zeitstrahl.update_xaxes(title_text = "Wochennummer")
+    else:
+        zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher monatlicher Verlauf zwischen %s und %s</b>" % (start, ende),title_x=0.5)
+        zeitverlauf.update_xaxes(title_text = "Tag im Monat")
+        zeitstrahl.update_layout(title_text = "<b>Monatlicher Verlauf von %s bis %s</b>" % (start, ende),title_x=0.5)
+        zeitstrahl.update_xaxes(title_text = "Monatsnummer")
+
+
     return [zeitstrahl,zeitverlauf]
 
 def orteHinzufuegen(werteStrahlOrt, werteVerlaufOrt,ortKlick,zeitstrahl,zeitverlauf):
@@ -296,38 +157,57 @@ def orteHinzufuegen(werteStrahlOrt, werteVerlaufOrt,ortKlick,zeitstrahl,zeitverl
         ortQuelle = ortQuelle[ortQuelle.Ort == ortsname]
         ort2019 = ortQuelle.filter(like='2019', axis=0)
         ort2020 = ortQuelle.filter(like='2020', axis=0)
-        #ortFigure = px.line(ortQuelle, x="Datum", y="Wert", color = "Jahr", hover_name="Ort",  color_discrete_sequence=['green', 'red'])
-        #ortFigure.data[0].name = "2020 - " + ortsname
-        #ortFigure.data[1].name = "2019 - " + ortsname
+        ortFigure = px.line(ortQuelle, x="Datum", y="Wert", color = "Jahr", hover_name="Ort",  color_discrete_sequence=['green', 'red'])
+        ortFigure.data[0].name = "2020 - " + ortsname
+        ortFigure.data[1].name = "2019 - " + ortsname
         #zeitstrahl = go.Figure(data = zeitstrahl.data + ortFigure.data)
+        #zeitstrahl.update_layout(height=300,margin={"r":0,"t":30,"l":30,"b":0},title_x=0.5)
         zeitstrahl.add_trace(go.Scatter(x=ort2019.Datum, y=ort2019.Wert, name = ortsname + " 2019"))
         zeitstrahl.add_trace(go.Scatter(x=ort2020.Datum, y=ort2020.Wert, name = ortsname + " 2020"))
-        ortVerlaufQuelle = pd.DataFrame.from_dict(werteVerlaufOrt, orient='index', columns = ["Monat","Jahr","Ort","Wert"])
+        ortVerlaufQuelle = pd.DataFrame.from_dict(werteVerlaufOrt, orient='index', columns = ["Monat","Jahr","Ort","xAchse","Wert"])
         ortV2019 = ortVerlaufQuelle.filter(like='2019', axis=0)
         ortV2020 = ortVerlaufQuelle.filter(like='2020', axis=0)
         #ortVFigure = px.line(ortVerlaufQuelle, x="Datum", y="Wert", color = "Jahr", hover_name="Ort", color_discrete_sequence=['green', 'red'])
         #ortVFigure.data[0].name = "2020 - " + ortsname
         #ortVFigure.data[1].name = "2019 - " + ortsname
         #zeitstrahl = go.Figure(data = zeitstrahl.data + ortFigure.data)
-        zeitverlauf.add_trace(go.Scatter(x=ortV2019.Monat, y=ortV2019.Wert, name = ortsname + " 2019"))
-        zeitverlauf.add_trace(go.Scatter(x=ortV2020.Monat, y=ortV2020.Wert, name = ortsname + " 2020"))
+        zeitverlauf.add_trace(go.Scatter(x=ortV2019.xAchse, y=ortV2019.Wert, name = ortsname + " 2019"))
+        zeitverlauf.add_trace(go.Scatter(x=ortV2020.xAchse, y=ortV2020.Wert, name = ortsname + " 2020"))
     return [zeitstrahl, zeitverlauf]
 
-def infoboxErstellen(schadstoff, kartenDic, ortKlick):
-    
+def infoboxErstellen(schadstoff, kartenDic, ortKlick, start, ende):
+    result = ()
     summe = 0
     for ele in kartenDic:
         values = kartenDic[ele]
         summe += float(values[3])
     avg = summe/len(kartenDic)
+    result += (html.Li("Algemeiner Durchschnitt: " + str(round(avg, 3)))),
    
     if ortKlick != None:
         ort = json.loads(ortKlick)["Ort"]
         ortsWert = kartenDic[ort][3]
-        return ("Der durchschnittliche Wert von allen Werten liegt bei "+ str(round(avg, 3)) + ". " +
-        "Der durchschnittliche Wert von " + str(ort) + " liegt bei " + str(ortsWert)
-        )
-    return ("Der durchschnittliche Wert von allen Werten liegt bei "+ str(round(avg, 3)))
+        result += (html.Li("Schnitt " + str(ort) + ": " + str(ortsWert))),
+    
+    startTag = datetime.datetime(2020,int(start),1).timetuple().tm_yday
+    endTag = datetime.datetime(2020,int(ende),1).timetuple().tm_yday
+    
+    startline = linecache.getline("./daten/Faelle_nach_KreisenSort.csv", startTag + 1)
+    startline = startline.strip()
+    faelleSummeStart = int(startline.split(",")[3])
+    todeSummeStart = int(startline.split(",")[4])
+
+    endline = linecache.getline("./daten/Faelle_nach_KreisenSort.csv", endTag + 1)
+    endline = endline.strip()
+    faelleSummeEnde = int(endline.split(",")[3])
+    todeSummeEnde = int(endline.split(",")[4])
+
+    faelleSumme = faelleSummeEnde - faelleSummeStart
+    todeSumme = todeSummeEnde - todeSummeStart
+    result += (html.Li("Kummulierte Fälle im Zeitraum: " + str(faelleSumme))),
+    result += (html.Li("Kummulierte Tode im Zeitraum: " + str(todeSumme))),
+
+    return result
     
 
 
@@ -371,15 +251,17 @@ def zeitstrahlBerechnen(zeit, gefiltert):
         if zeit == "Tag":
             time = datum.hour
             datum = datetime.datetime(2020,datum.month,datum.day)
+            xaxis = str(time).zfill(2) + ":00"
         elif zeit == "Woche":
             wochensplit = datum.isocalendar() # Jahr, Wochennummer, Tag
-            #xaxis = calendar.day_name[datum.weekday()] #Name des Wochentags -> Samstag
+            xaxis = calendar.day_name[datum.weekday()] #Name des Wochentags -> Samstag
             time = datum.weekday() #Nummer des Tages in der Woche
             #datum = date.fromisocalendar(wochensplit[0] , wochensplit[1], 1) #Datum des Wochenbeginns
             datum = wochensplit[1]
             jahr = wochensplit[0]
         else: 
             time = datum.day
+            xaxis = str(time) + "."
             datum = datum.month
         #Dictionary wird mit Zeug für Zeitstrahl gefüllt
         if (datum, jahr) in zeitDic:
@@ -390,13 +272,13 @@ def zeitstrahlBerechnen(zeit, gefiltert):
         else:
             zeitDic[datum,jahr] = [wert,1]
         #Dictionary wird mit Zeug für Verlauf gefüllt
-        if (time,jahr) in verlaufDic:
-            values = verlaufDic[time,jahr]
+        if (time,jahr,xaxis) in verlaufDic:
+            values = verlaufDic[time,jahr,xaxis]
             values[0] += wert
             values[1] += 1
-            verlaufDic[time,jahr] = values
+            verlaufDic[time,jahr, xaxis] = values
         else:
-            verlaufDic[time,jahr] = [wert, 1]
+            verlaufDic[time,jahr, xaxis] = [wert, 1]
     #print(verlaufDic)
     
 
@@ -413,7 +295,8 @@ def zeitstrahlBerechnen(zeit, gefiltert):
         avg = values[0] / values[1]
         time = str(elem[0])
         jahr = str(elem[1])
-        verlauf[time, jahr] = [time,jahr,round(avg, 3)]
+        xaxis = str(elem[2])
+        verlauf[time, jahr] = [time,jahr,xaxis,round(avg, 3)]
     return [zeitstrahl,verlauf]
     
 def ortsWerteBerechnen(zeit,gefiltert):
@@ -464,24 +347,26 @@ def zeitverlaufOrt(zeit, gefiltert):
         if zeit == "Tag":
             time = datum.hour
             datum = datetime.datetime(2020,datum.month,datum.day)
+            xaxis = str(time).zfill(2) + ":00"
         elif zeit == "Woche":
             wochensplit = datum.isocalendar() # Jahr, Wochennummer, Tag
-            #xaxis = calendar.day_name[datum.weekday()] #Name des Wochentags -> Samstag
+            xaxis = calendar.day_name[datum.weekday()] #Name des Wochentags -> Samstag
             time = datum.weekday() #Nummer des Tages in der Woche
             #datum = date.fromisocalendar(wochensplit[0] , wochensplit[1], 1) #Datum des Wochenbeginns
             datum = wochensplit[1]
             jahr = wochensplit[0]
         else: 
             time = datum.day
+            xaxis = str(time) + "."
             datum = datum.month
         #Dictionary wird mit Zeug für Verlauf gefüllt
-        if (time,jahr,ort) in verlaufDic:
-            values = verlaufDic[time,jahr,ort]
+        if (time,jahr,ort,xaxis) in verlaufDic:
+            values = verlaufDic[time,jahr,ort,xaxis]
             values[0] += wert
             values[1] += 1
-            verlaufDic[time,jahr,ort] = values
+            verlaufDic[time,jahr,ort,xaxis] = values
         else:
-            verlaufDic[time,jahr,ort] = [wert, 1]
+            verlaufDic[time,jahr,ort,xaxis] = [wert, 1]
     #print(verlaufDic)
     
     
@@ -491,7 +376,8 @@ def zeitverlaufOrt(zeit, gefiltert):
         time = str(elem[0])
         jahr = str(elem[1])
         ort = str(elem[2])
-        verlauf[time, jahr] = [time,jahr,ort,round(avg, 3)]
+        xaxis = str(elem[3])
+        verlauf[time, jahr] = [time,jahr,ort,xaxis,round(avg, 3)]
     return verlauf
 
 def kartenWerte(gefiltert):

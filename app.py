@@ -87,12 +87,13 @@ def coronaRendern(zeit):
     massnahmenQuelle = pd.read_csv("./daten/maßnahmen.csv")
     sub.append_trace(go.Scatter(x = massnahmenQuelle.Datum, y = massnahmenQuelle.Wert, mode = 'lines+markers', hovertext = massnahmenQuelle.Ereignis),row=4, col=1)
     
-
-    sub.update_layout(title_text="<b>Corona-Inzidenzzahlen in Barcelona</b>",showlegend=False,height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
+    sub.update_layout(title_text="<b>Corona-Inzidenzzahlen in Barcelona</b>",showlegend=False,height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5, hovermode="x unified")
     sub.update_xaxes(title_text="Zeit")
     sub.update_yaxes(title_text="<b>Fallzahlen</b> absolut", secondary_y=False, title_font=dict(color="blue"), row=1, col=1)
     sub.update_yaxes(title_text="<b>Tode</b> absolut", secondary_y=True,title_font=dict(color="red"))
     sub.update_yaxes(title_text="<b>Ereignisse</b>" ,tickvals=["Ereignis"], visible = True, row= 4, col = 1)
+    sub.update_xaxes(visible = False, row = 1, col = 1)
+
 
     return sub
 
@@ -119,8 +120,8 @@ def zeitstrahlUndVerlaufRendern(zeit, schadstoff, werteZeitstrahl, werteVerlauf,
 
     #zeitstrahl.add_trace(px.Scatter(x=zeitstrahl2020.Monat, y=zeitstrahl2020.Wert,line=dict(color="black"), name="2020")),
     #zeitstrahl.add_trace(px.Scatter(x=zeitstrahl2019.Monat, y=zeitstrahl2019.Wert,line=dict(color="black"), name="2019"))
-    zeitstrahl.update_layout(height=300,margin={"r":0,"t":50,"l":30,"b":20},title_x=0.5)
-    zeitverlauf.update_layout(height=300,margin={"r":0,"t":50,"l":30,"b":0},title_x=0.5)
+    zeitstrahl.update_layout(height=300,margin={"r":0,"t":50,"l":30,"b":20},title_x=0.5, hovermode="x unified")
+    zeitverlauf.update_layout(height=300,margin={"r":0,"t":50,"l":30,"b":0},title_x=0.5, hovermode="x unified")
 
     if schadstoff == "CO":
         zeitverlauf.update_yaxes(title_text="<b>mg/m³</b>")
@@ -134,7 +135,8 @@ def zeitstrahlUndVerlaufRendern(zeit, schadstoff, werteZeitstrahl, werteVerlauf,
         zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher täglicher Verlauf zwischen %s und %s</b>" % (start, ende),title_x=0.5)
         zeitverlauf.update_xaxes(title_text = "Uhrzeit")
         zeitstrahl.update_layout(title_text = "<b>Täglicher Verlauf von %s bis %s</b>" % (start, ende),title_x=0.5)
-        zeitstrahl.update_xaxes(title_text = "Datum")
+        zeitstrahl.update_xaxes(title_text = "Datum", ticktext=["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"], 
+        tickvals=["2020-01-15","2020-02-15","2020-03-15","2020-04-15","2020-05-15","2020-06-15","2020-07-15","2020-08-15","2020-09-15","2020-10-15","2020-11-15","2020-12-15"])
     elif zeit == "Woche":
         zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher wöchentlicher Verlauf zwischen %s und %s</b>" % (start, ende),title_x=0.5)
         zeitverlauf.update_xaxes(title_text = "Tag in der Woche")
@@ -204,8 +206,8 @@ def infoboxErstellen(schadstoff, kartenDic, ortKlick, start, ende):
 
     faelleSumme = faelleSummeEnde - faelleSummeStart
     todeSumme = todeSummeEnde - todeSummeStart
-    result += (html.Li("Kummulierte Fälle im Zeitraum: " + str(faelleSumme))),
-    result += (html.Li("Kummulierte Tode im Zeitraum: " + str(todeSumme))),
+    result += (html.Li("Kumulierte Fälle im Zeitraum: " + str(faelleSumme))),
+    result += (html.Li("Kumulierte Tode im Zeitraum: " + str(todeSumme))),
 
     return result
     
@@ -237,8 +239,8 @@ def filtern(schadstoff, start, end):
     return gefiltert
 
 def zeitstrahlBerechnen(zeit, gefiltert):
-    #Berechnet die Werte für den Zeistrahl und den Tages/wochen/Monatsverlauf, indem die Daten jeweils in einem Dic gespeichert werden und dann der Mittelwert gebildet wird
-    #
+    """Berechnet die Werte für den Zeistrahl und den Tages/wochen/Monatsverlauf, indem die Daten jeweils in einem Dic gespeichert werden und dann der Mittelwert gebildet wird
+    """
     zeitstrahl = {} 
     verlauf = {}
     zeitDic = {}

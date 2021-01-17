@@ -22,9 +22,10 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
         }, children=[
             # Radio mit Auswahlmöglichkeit für Luftverschmutzungsart
             dcc.RadioItems(
-                style={
-                    'textAlign': 'center',
-                    'color': colors['text']
+                inputStyle={
+                    #'textAlign': 'center',
+                    #'color': colors['text'],
+                    'margin-left' : '10px'
                 },
                 id="schadwert",
                 options=[
@@ -41,9 +42,10 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
             ),
             # Radio mit Auswahlmöglichkeit für Tag/Woche/Monat
             dcc.RadioItems(
-                style={
-                    'textAlign': 'center',
-                    'color': colors['text']
+                inputStyle={
+                    #'textAlign': 'center',
+                    #'color': colors['text'],
+                    'margin-left' : '10px'
                 },
                 id="zeitabschnitt",
                 options=[

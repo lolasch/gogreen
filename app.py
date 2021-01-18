@@ -20,7 +20,7 @@ from dash.dependencies import Input, Output
 from plotly.subplots import make_subplots
 from past.builtins import execfile
 import locale
-locale.setlocale(locale.LC_ALL, 'de_DE')
+locale.setlocale(locale.LC_TIME, 'de_DE')
 
 external_scripts = ["https://cdn.plot.ly/plotly-locale-de-latest.js"]
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -246,6 +246,7 @@ def filtern(schadstoff, start, end, startTag, endTag):
             if (start == monat and tag >= startTag) or (start < monat and monat < end) or (end == monat and tag <= endTag):
                 datum = datetime.datetime(jahr, monat, tag,int(stunde))
                 gefiltert[ort, datum] = (ort, datum, float(wert))
+                
     return gefiltert
 
 def zeitstrahlBerechnen(zeit, gefiltert):
@@ -427,7 +428,7 @@ def kartenWerte(gefiltert):
         elif (ele == "Vall Hebron"):
             ergebnisDic[ele] = ele, 41.4261, 2.148, round(avg, 3)
         else:
-            print("Error")
+            print("StandortFehler")
     return ergebnisDic
 
 

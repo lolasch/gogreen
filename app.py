@@ -19,48 +19,37 @@ import datetime
 from dash.dependencies import Input, Output
 from plotly.subplots import make_subplots
 from past.builtins import execfile
+import locale
+locale.setlocale(locale.LC_ALL, 'de_DE')
 
-
+external_scripts = ["https://cdn.plot.ly/plotly-locale-de-latest.js"]
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(__name__,external_scripts=external_scripts, external_stylesheets=external_stylesheets)
 #app.scripts.append_script({"external_url": "https://cdn.plot.ly/plotly-locale-de-latest.js"})
 app.title = 'Go Green'
 
 
 server = app.server
 
-
 colors = {
     'background': '#FFFFFF',
     'text': '#000000'
 }
 
-# assume you have a "long-form" data frame
-# see https://plotly.com/python/px-arguments/ for more options
-#def main():
-    #make_line_charts("Woche", "NO2", "2019-04-01", "2020-12-31", None)
-    #global gefiltert 
-    #kartenDic = kartenWerte(filtern("NO2", "2019-04-01", "2020-12-31"))
-    #karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenWerte(filtern("NO2", "2019-04-01", "2020-12-31")),orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", lon="Long", zoom=11, height=300, width=870, size = "Durchschnitt", hover_name="Ort",)
-    #karte.update_layout(mapbox_style="open-street-map",showlegend=False)
-    #karte.update_layout(margin={"r":0,"t":0,"l":30,"b":0})
-        
-
-
 execfile('layout1.py')
 
 
 @app.callback([Output('g1', 'figure'),Output('corona', 'figure'),Output('zeitstrahl', 'figure'),Output('zeitverlauf', 'figure'),Output('infobox', 'children')],
-    [Input('zeitabschnitt', 'value'),Input('schadwert', 'value'),Input('start','value'), Input('ende','value'),Input('ortDiv','children')])
-def mainCallback(zeit, schadstoff, start, ende, ortKlick = None):
+    [Input('zeitabschnitt', 'value'),Input('schadwert', 'value'),Input('start','value'), Input('ende','value'),Input('ortDiv','children'),Input('startTag','value'), Input('endTag','value')])
+def mainCallback(zeit, schadstoff, start, ende, ortKlick,startTag, endTag):
     """ Wird immer getriggert, wenn was passiert. Sammelt alles und stellt das dann in den Outputs dar """
-    gefiltert = filtern(schadstoff, int(start), int(ende))
+    gefiltert = filtern(schadstoff, int(start), int(ende), startTag,endTag)
     werteZeitstrahl, werteVerlauf = zeitstrahlBerechnen(zeit, gefiltert)
     werteStrahlOrt = ortsWerteBerechnen(zeit, gefiltert)
     werteVerlaufOrt = zeitverlaufOrt(zeit,gefiltert)
     berechneteKarte, kartenDic = karteRendern(gefiltert)
-    zeitstrahl, zeitverlauf = zeitstrahlUndVerlaufRendern(zeit, schadstoff,werteZeitstrahl,werteVerlauf, start, ende)
+    zeitstrahl, zeitverlauf = zeitstrahlUndVerlaufRendern(zeit, schadstoff,werteZeitstrahl,werteVerlauf, start, ende,startTag,endTag)
     zeitstrahl, zeitverlauf = orteHinzufuegen(werteStrahlOrt,werteVerlaufOrt,ortKlick,zeitstrahl,zeitverlauf)
     coronaFig = coronaRendern(zeit)
     infobox = infoboxErstellen(schadstoff,kartenDic, ortKlick, start,ende)
@@ -93,9 +82,30 @@ def coronaRendern(zeit):
     sub.update_yaxes(title_text="<b>Tode</b> absolut", secondary_y=True,title_font=dict(color="red"))
     sub.update_yaxes(title_text="<b>Ereignisse</b>" ,tickvals=["Ereignis"], visible = True, row= 4, col = 1)
     sub.update_xaxes(visible = False, row = 1, col = 1)
-
-
     return sub
+
+@app.callback([Output("startTag", 'max'), Output("startTag", 'value')],
+            [Input('start','value')])
+def TagAnzeigenStart(startMonat):
+    startMonat = int(startMonat)
+    if startMonat in set((1,3,5,7,8,10,12)):
+        return [31,1]
+    elif startMonat in set((4,6,9,11)):
+        return [30,1]
+    else:
+        return [29,1]
+
+@app.callback([Output("endTag", 'max'), Output("endTag", 'value')],
+            [Input('ende','value')])
+def TagAnzeigenEnde(endMonat):
+    endMonat = int(endMonat)
+    if endMonat in set((1,3,5,7,8,10,12)):
+        return [31,31]
+    elif endMonat in set((4,6,9,11)):
+        return [30,30]
+    else:
+        return [29,29]
+
 
 
 @app.callback(Output('ortDiv','children'), Input('g1','clickData'))
@@ -108,7 +118,7 @@ def klickSpeichern(klick):
     else:
         return None
 
-def zeitstrahlUndVerlaufRendern(zeit, schadstoff, werteZeitstrahl, werteVerlauf, start, ende):
+def zeitstrahlUndVerlaufRendern(zeit, schadstoff, werteZeitstrahl, werteVerlauf, start, ende, startTag,endTag):
     """Bekommt den Schadstoff (zur Achsenbeschriftung) und die Werte für Zeitstrahl und Verlauf. Returnt zwei Figs damit"""
     zeitstrahlQuelle = pd.DataFrame.from_dict(werteZeitstrahl ,orient='index', columns = ["Monat","Jahr","Wert"])
     verlaufQuelle = pd.DataFrame.from_dict(werteVerlauf ,orient='index', columns = ["Datum","Jahr","x-Achse","Wert"])
@@ -132,20 +142,20 @@ def zeitstrahlUndVerlaufRendern(zeit, schadstoff, werteZeitstrahl, werteVerlauf,
     start = calendar.month_name[int(start)]
     ende = calendar.month_name[int(ende)]
     if zeit == "Tag":        
-        zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher täglicher Verlauf zwischen %s und %s</b>" % (start, ende),title_x=0.5)
+        zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher täglicher Verlauf von %s zwischen dem %s. %s und dem %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
         zeitverlauf.update_xaxes(title_text = "Uhrzeit")
-        zeitstrahl.update_layout(title_text = "<b>Täglicher Verlauf von %s bis %s</b>" % (start, ende),title_x=0.5)
+        zeitstrahl.update_layout(title_text = "<b>Täglicher Verlauf von %s ab dem %s. %s bis zum %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
         zeitstrahl.update_xaxes(title_text = "Datum", ticktext=["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"], 
         tickvals=["2020-01-15","2020-02-15","2020-03-15","2020-04-15","2020-05-15","2020-06-15","2020-07-15","2020-08-15","2020-09-15","2020-10-15","2020-11-15","2020-12-15"])
     elif zeit == "Woche":
-        zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher wöchentlicher Verlauf zwischen %s und %s</b>" % (start, ende),title_x=0.5)
+        zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher wöchentlicher Verlauf von %s zwischen dem %s. %s und dem %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
         zeitverlauf.update_xaxes(title_text = "Tag in der Woche")
-        zeitstrahl.update_layout(title_text = "<b>Wöchentlicher Verlauf von %s bis %s</b>" % (start, ende),title_x=0.5)
+        zeitstrahl.update_layout(title_text = "<b>Wöchentlicher Verlauf von %s ab dem %s. %s bis zum %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
         zeitstrahl.update_xaxes(title_text = "Wochennummer")
     else:
-        zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher monatlicher Verlauf zwischen %s und %s</b>" % (start, ende),title_x=0.5)
+        zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher monatlicher Verlauf von %s zwischen dem %s. %s und dem %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
         zeitverlauf.update_xaxes(title_text = "Tag im Monat")
-        zeitstrahl.update_layout(title_text = "<b>Monatlicher Verlauf von %s bis %s</b>" % (start, ende),title_x=0.5)
+        zeitstrahl.update_layout(title_text = "<b>Monatlicher Verlauf %s ab dem %s. %s bis zum %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
         zeitstrahl.update_xaxes(title_text = "Monatsnummer")
 
 
@@ -213,7 +223,7 @@ def infoboxErstellen(schadstoff, kartenDic, ortKlick, start, ende):
     
 
 
-def filtern(schadstoff, start, end):
+def filtern(schadstoff, start, end, startTag, endTag):
     #Öffnet das zum Schadstoff passende File und entfernt alle Linien, die nicht im Datumsrange liegen. Speichert diese in gefiltert
     #
     gefiltert = {}
@@ -233,7 +243,7 @@ def filtern(schadstoff, start, end):
         tag = int(datum[2])
         wert = linie[2]
         if wert != "NA":
-            if start <= monat and monat <= end:
+            if (start == monat and tag >= startTag) or (start < monat and monat < end) or (end == monat and tag <= endTag):
                 datum = datetime.datetime(jahr, monat, tag,int(stunde))
                 gefiltert[ort, datum] = (ort, datum, float(wert))
     return gefiltert

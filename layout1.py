@@ -1,4 +1,4 @@
-app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
+app.layout = html.Div(style={'backgroundColor': colors['background']},children=[
 
     html.Img(style={
         'width': 250,
@@ -59,13 +59,21 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
         ], className="row"),
     html.Div(
         style={
-            'display': 'block',
+            'display' : 'flex',
             'margin-left': 'auto',
             'margin-right': 'auto',
             'text-align': 'center',
-            'width': '300px'
+            'width' : '500px',
         }, children=[
-            html.Div(children=[
+            html.Div(style={'flex':'1', 'width': '0px', 'margin-right':'0px', 'padding-right':'0px'},children = [
+                dcc.Input(
+                    id='startTag',
+                    type = "number",
+                    value= 1,
+                    min = 1,
+                    step = 1
+            ),],className = "six columns"),
+            html.Div(style={'flex':'1', 'width': "40%", 'margin-left' : '0px','margin-right':'10px'},children = [
                 dcc.Dropdown(
                     id='start',
                     options=[
@@ -82,10 +90,18 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                         {'label': 'November', 'value': '11'},
                         {'label': 'Dezember', 'value': '12'},
                     ],
-                    value='1'
-                ),
-            ], className="six columns"),
-            html.Div(children=[
+                    value='1',
+                    clearable = False,
+            ),],className = "six columns"),
+            html.Div(style={'flex':'1', 'width': "5%",'margin-right':'0px', 'margin-left' : '10px'},children = [
+                dcc.Input(
+                    id='endTag',
+                    type = "number",
+                    value= 31,
+                    min = 1,
+                    step = 1
+            ),],className = "six columns"),
+            html.Div(style={'flex':'1', 'width': "40%", 'margin-left' : '0px'},children = [
                 dcc.Dropdown(
                     id='ende',
                     options=[
@@ -102,9 +118,9 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                         {'label': 'November', 'value': '11'},
                         {'label': 'Dezember', 'value': '12'}
                     ],
-                    value='12'
-                ),
-            ], className="six columns"),
+                    value='12',
+                    clearable = False,
+            ),],className = "six columns"),
         ], className="row"),
 
     html.Div([
@@ -116,23 +132,23 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                     children=[
                         html.Div( # Karte
                             style={'width': '60%'},
-                            children=[dcc.Graph(id='g1')], 
+                            children=[dcc.Graph(id='g1', config=dict(locale="de"))], 
                             className="flex-child"
                         ),
                         html.Div( #Infobox
                             style={'width': '40%','padding': '20px'}, 
                             children=[html.H3("Infobox"),
-                            html.Ul(id='infobox', )], 
+                            html.Ul(id='infobox')], 
                             className="flex-child"
                         ),
                     ], className="flex-container"),
-                html.Div([dcc.Graph(id="corona"), #Corona-Graph
+                html.Div([dcc.Graph(id="corona", config=dict(locale="de")), #Corona-Graph
                 ]
             )], className="six columns"),
 
         html.Div([
-            html.Div([dcc.Graph(id="zeitstrahl")]), #Zeitstrahl
-            html.Div([dcc.Graph(id="zeitverlauf")]), #Zeitverlauf
+            html.Div([dcc.Graph(id="zeitstrahl", config=dict(locale="de"))]), #Zeitstrahl
+            html.Div([dcc.Graph(id="zeitverlauf", config=dict(locale="de"))]), #Zeitverlauf
             ],
             className="six columns"
         ),

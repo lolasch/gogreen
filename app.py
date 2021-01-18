@@ -20,7 +20,7 @@ from dash.dependencies import Input, Output
 from plotly.subplots import make_subplots
 from past.builtins import execfile
 import locale
-locale.setlocale(locale.LC_TIME, 'de_DE')
+#locale.setlocale(locale.LC_ALL, 'de_DE') # nur Lokal. Kann Heroku nicht!
 
 external_scripts = ["https://cdn.plot.ly/plotly-locale-de-latest.js"]
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']

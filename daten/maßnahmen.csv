@@ -1,22 +1,20 @@
-Datum,Ereignis,Wert
-2020-01-01,Jahresbeginn,0
-2020-01-31,Erster Covid-19 Fall in Spanien,0
-2020-02-13,Absage Mobile World Congress Barcelona,0
-2020-03-11,Covid-19 wird zur weltweiten Pandemie erklärt,0
-2020-03-14,Verhängung eines Lockdowns - nur noch Einkaufen und Arbeiten ist erlaubt,0
-2020-03-20,Zahl der Coronatoten übersteigt 1.000,0
-2020-03-29,"Ausweitung des Lockdowns - Umstellung auf Kriegswirtschaft, nicht essentielle Wirtschaftszweige schließen",0
-2020-04-02,Zahl der Coronatoten übersteigt 10.000,0
-2020-04-09,Überlegungen der Regierung zur Rückkehr in die Normalität,0
-2020-04-19,Verlängerung des Lockdowns,0
-2020-04-26,Kinder bis 13 Jahre dürfen einmal am Tag in Begleitung eines Erwachsenen spazieren gehen,0
-2020-05-02,Spaziergänge und Sport vor der Tür sind wieder erlaubt,0
-2020-05-10,Bars und Restaurants dürfen wieder öffnen,0
-2020-06-01,Öffnung der Strände,0
-2020-06-21,Ende des Notstandes,0
-2020-07-17,Empfehlung an die Bevölkerung das Haus nur für Einkäufe und Arbeit zu verlassen,0
-2020-07-24,Nachtclubs und Discos in Barcelona müssen schließen,0
-2020-10-22,Katalonien riegelt sich von anderen Regionen ab,0
-2020-10-25,"Verhängung eines weiteren Notstandes bis Mai 2021, kein weiterer Lockdown",0
-2020-12-28,Zahl der Coronatoten übersteigt 50.000,0
-2020-12-31,Jahresende,0
+Date,Event,Value,Value1
+2020-01-31,First Covid-19 case in spain,0,7000
+2020-02-13,Mobile World Congress Barcelona cancelation,0,7000
+2020-03-11,Covid-19 is declared as a worldwide pandemic,557,7000
+2020-03-14,First Lockdown - only shopping and working is allowed,407,7000
+2020-03-20,"Number of corona deaths exceeds 1,000",1713,7000
+2020-03-29,"Extend lockdown - switch to wartime economy, close non-essential sectors of economy",1059,7000
+2020-04-02,"Number of corona deaths exceeds 10,000",1486,7000
+2020-04-09,Government considerations for the return to normality,1615,7000
+2020-04-19,Extending the lockdown,515,7000
+2020-04-26,Children up to 13 years are allowed to walk once a day accompanied by an adult,328,7000
+2020-05-02,Walks and sports outside the door are allowed again,276,7000
+2020-05-10,Bars and restaurants reopen,103,7000
+2020-06-01,Opening of the beaches,96,7000
+2020-06-21,End of Lockdown,46,7000
+2020-07-17,Recommendation to the population to leave the house only for shopping and work.,1518,7000
+2020-07-24,Nightclubs and discos in Barcelona must close,1398,7000
+2020-10-22,Catalonia seals itself off from other regions,5998,7000
+2020-10-25,Preventing another emergency until May 2021 - no lockdown,2014,7000
+2020-12-28,"Number of corona deaths exceeds 50,000",3817,7000

@@ -48,17 +48,29 @@ def mainCallback(zeit, schadstoff, start, ende, ortKlick,startTag, endTag):
     werteZeitstrahl, werteVerlauf = zeitstrahlBerechnen(zeit, gefiltert)
     werteStrahlOrt = ortsWerteBerechnen(zeit, gefiltert)
     werteVerlaufOrt = zeitverlaufOrt(zeit,gefiltert)
-    berechneteKarte, kartenDic = karteRendern(gefiltert)
+    berechneteKarte, kartenDic = karteRendern(gefiltert,ortKlick)
     zeitstrahl, zeitverlauf = zeitstrahlUndVerlaufRendern(zeit, schadstoff,werteZeitstrahl,werteVerlauf, start, ende,startTag,endTag)
     zeitstrahl, zeitverlauf = orteHinzufuegen(werteStrahlOrt,werteVerlaufOrt,ortKlick,zeitstrahl,zeitverlauf)
     coronaFig = coronaRendern(zeit)
     infobox = infoboxErstellen(schadstoff,kartenDic, ortKlick, start,ende)
     return (berechneteKarte,coronaFig,zeitstrahl,zeitverlauf, infobox)
 
-def karteRendern(gefiltert):
+def karteRendern(gefiltert,ortKlick):
     """Erstellt die Figure Karte mit dem Werten aus gefiltert und gibt diese zurück """
     kartenDic = kartenWerte(gefiltert)
-    karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", color = "Ort", lon="Long", zoom=11, height=300, size = "Durchschnitt", hover_name="Ort",title="<b>Karte von Barcelona</b>")
+
+    sequence = ['#636EFA','#EF553B','#00CC96','#AB63FA','#FFA15A','#19D3F3','#FF6692','#B6E880']
+    if ortKlick != None:
+        ort = json.loads(ortKlick)["Ort"]
+        counter = 0
+        for elem in kartenDic:
+            if elem == ort:
+                break
+            counter += 1
+        sequence[counter] = "#750D86" 
+    
+    karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", color = "Ort", lon="Long", zoom=11, height=300, size = "Durchschnitt", 
+    color_discrete_sequence=sequence,hover_name="Ort",title="<b>Map of Barcelona</b>")
     karte.update_layout(mapbox_style="open-street-map",showlegend=False)
     karte.update_layout(margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
     return karte,kartenDic
@@ -68,20 +80,20 @@ def coronaRendern(zeit):
         coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSort.csv") #Fälle nach Tagen 
     else:
         coronaWerte = pd.read_csv("./daten/Faelle_nach_KreisenSortWoche.csv") #Fälle nach Wochen
-    sub = make_subplots(rows=4, cols=1, shared_xaxes=True, specs = [[{"secondary_y": True, "rowspan": 3}],[None],[None],[{"secondary_y": False}]])
-    sub.add_trace(go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Faelle, name="Falldaten"),row=1, col=1, secondary_y=False)# Linke Achse -> Fälle
-    sub.add_trace(go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Tote, name="Tode"),row=1, col=1, secondary_y=True,) # Rechte Achse -> Tode
+    
+    sub = make_subplots(specs=[[{"secondary_y": True}]])
+    sub.add_trace(go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Faelle, name="Falldaten"), secondary_y=False)# Linke Achse -> Fälle
+    sub.add_trace(go.Scatter(x=coronaWerte.Datum, y=coronaWerte.Tote, name="Tode",line=dict(color = "orange")), secondary_y=True,) # Rechte Achse -> Tode
     
 
     massnahmenQuelle = pd.read_csv("./daten/maßnahmen.csv")
-    sub.append_trace(go.Scatter(x = massnahmenQuelle.Datum, y = massnahmenQuelle.Wert, mode = 'lines+markers', hovertext = massnahmenQuelle.Ereignis),row=4, col=1)
+    sub.add_trace(go.Bar(x = massnahmenQuelle.Date, y = massnahmenQuelle.Value1, marker_color = "rgba(205, 205, 205, 1)", hovertext = massnahmenQuelle.Event),secondary_y=False)
     
-    sub.update_layout(title_text="<b>Corona-Inzidenzzahlen in Barcelona</b>",showlegend=False,height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5, hovermode="x unified")
+    sub.update_layout(title_text="<b>Corona incident rate in Barcelona</b>",showlegend=False,height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
     sub.update_xaxes(title_text="Zeit")
-    sub.update_yaxes(title_text="<b>Fallzahlen</b> absolut", secondary_y=False, title_font=dict(color="blue"), row=1, col=1)
-    sub.update_yaxes(title_text="<b>Tode</b> absolut", secondary_y=True,title_font=dict(color="red"))
-    sub.update_yaxes(title_text="<b>Ereignisse</b>" ,tickvals=["Ereignis"], visible = True, row= 4, col = 1)
-    sub.update_xaxes(visible = False, row = 1, col = 1)
+    sub.update_yaxes(title_text="<b>Cases</b> absolute", secondary_y=False, title_font=dict(color="orange"))
+    sub.update_yaxes(title_text="<b>Deaths</b> absolute", secondary_y=True,title_font=dict(color="blue"))
+    #sub.update_yaxes(title_text="<b>Events</b>" ,tickvals=["Events"], visible = True, row= 4, col = 1)
     return sub
 
 @app.callback([Output("startTag", 'max'), Output("startTag", 'value')],
@@ -106,12 +118,11 @@ def TagAnzeigenEnde(endMonat):
     else:
         return [29,29]
 
-
-
 @app.callback(Output('ortDiv','children'), Input('g1','clickData'))
 def klickSpeichern(klick):
     """ Simpler Callback, der in ein unsichtbares Div die geklickten Orte schreibt"""
     if klick != None:
+        #print(klick)
         ort = str(klick['points'][0]['hovertext'])
         ort = {"Ort": ort}
         return json.dumps(ort)
@@ -121,15 +132,22 @@ def klickSpeichern(klick):
 def zeitstrahlUndVerlaufRendern(zeit, schadstoff, werteZeitstrahl, werteVerlauf, start, ende, startTag,endTag):
     """Bekommt den Schadstoff (zur Achsenbeschriftung) und die Werte für Zeitstrahl und Verlauf. Returnt zwei Figs damit"""
     zeitstrahlQuelle = pd.DataFrame.from_dict(werteZeitstrahl ,orient='index', columns = ["Monat","Jahr","Wert"])
-    verlaufQuelle = pd.DataFrame.from_dict(werteVerlauf ,orient='index', columns = ["Datum","Jahr","x-Achse","Wert"])
-    #zeitstrahl2020 = zeitstrahlQuelle.filter(like='2020', axis=0)
-    #zeitstrahl2019 = zeitstrahlQuelle.filter(like='2019', axis=0)
+    verlaufQuelle = pd.DataFrame.from_dict(werteVerlauf ,orient='index', columns = ["Datum","Jahr","xAchse","Wert"])
+    zeitstrahl2020 = zeitstrahlQuelle.filter(like='2020', axis=0)
+    zeitstrahl2019 = zeitstrahlQuelle.filter(like='2019', axis=0)
+    zeitverlauf2020 = verlaufQuelle.filter(like='2020', axis=0)
+    zeitverlauf2019 = verlaufQuelle.filter(like='2019', axis=0)
+    zeitstrahl = go.Figure()
+    zeitverlauf = go.Figure()
     #zeitstrahlQuelle = zeitstrahlQuelle.filter("Jahr"=="2019")
-    zeitstrahl = px.line(zeitstrahlQuelle, x="Monat", y="Wert", color = "Jahr", color_discrete_sequence=[ 'blue','gray'])
-    zeitverlauf = px.line(verlaufQuelle, x="x-Achse", y="Wert", color = "Jahr", color_discrete_sequence=['orange', 'pink']) 
+    #zeitstrahl = px.line(zeitstrahlQuelle, x="Monat", y="Wert", color = "Jahr", color_discrete_sequence=['rgba(255, 0, 0, 1)','rgba(255, 0, 0, 0.5)'])
+    #zeitverlauf = px.line(verlaufQuelle, x="x-Achse", y="Wert", color = "Jahr", color_discrete_sequence=['orange', 'pink']) 
 
-    #zeitstrahl.add_trace(px.Scatter(x=zeitstrahl2020.Monat, y=zeitstrahl2020.Wert,line=dict(color="black"), name="2020")),
-    #zeitstrahl.add_trace(px.Scatter(x=zeitstrahl2019.Monat, y=zeitstrahl2019.Wert,line=dict(color="black"), name="2019"))
+    
+    zeitstrahl.add_trace(go.Scatter(x=zeitstrahl2020.Monat, y=zeitstrahl2020.Wert,line=dict(color="rgba(255, 0, 0, 1)"), name="2020"))
+    zeitstrahl.add_trace(go.Scatter(x=zeitstrahl2019.Monat, y=zeitstrahl2019.Wert,line=dict(color="rgba(255, 0,  0, 0.5)", dash='dash'), name="2019"))
+    zeitverlauf.add_trace(go.Scatter(x=zeitverlauf2019.xAchse, y=zeitverlauf2019.Wert,line=dict(color="rgba(255, 0,  0, 0.5)", dash='dash'), name="2019"))
+    zeitverlauf.add_trace(go.Scatter(x=zeitverlauf2020.xAchse, y=zeitverlauf2020.Wert,line=dict(color="rgba(255, 0, 0, 1)"), name="2020")),
     zeitstrahl.update_layout(height=300,margin={"r":0,"t":50,"l":30,"b":20},title_x=0.5, hovermode="x unified")
     zeitverlauf.update_layout(height=300,margin={"r":0,"t":50,"l":30,"b":0},title_x=0.5, hovermode="x unified")
 
@@ -142,21 +160,21 @@ def zeitstrahlUndVerlaufRendern(zeit, schadstoff, werteZeitstrahl, werteVerlauf,
     start = calendar.month_name[int(start)]
     ende = calendar.month_name[int(ende)]
     if zeit == "Tag":        
-        zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher täglicher Verlauf von %s zwischen dem %s. %s und dem %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
-        zeitverlauf.update_xaxes(title_text = "Uhrzeit")
-        zeitstrahl.update_layout(title_text = "<b>Täglicher Verlauf von %s ab dem %s. %s bis zum %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
-        zeitstrahl.update_xaxes(title_text = "Datum", ticktext=["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"], 
+        zeitverlauf.update_layout(title_text = "<b>Average daily course of %s between %s. %s and the %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
+        zeitverlauf.update_xaxes(title_text = "Time")
+        zeitstrahl.update_layout(title_text = "<b>Daily course of %s between %s. %s and the %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
+        zeitstrahl.update_xaxes(title_text = "Date", ticktext=["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], 
         tickvals=["2020-01-15","2020-02-15","2020-03-15","2020-04-15","2020-05-15","2020-06-15","2020-07-15","2020-08-15","2020-09-15","2020-10-15","2020-11-15","2020-12-15"])
     elif zeit == "Woche":
-        zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher wöchentlicher Verlauf von %s zwischen dem %s. %s und dem %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
-        zeitverlauf.update_xaxes(title_text = "Tag in der Woche")
-        zeitstrahl.update_layout(title_text = "<b>Wöchentlicher Verlauf von %s ab dem %s. %s bis zum %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
-        zeitstrahl.update_xaxes(title_text = "Wochennummer")
+        zeitverlauf.update_layout(title_text = "<b>Average weekly course of %s between %s. %s and %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
+        zeitverlauf.update_xaxes(title_text = "Day of the Week")
+        zeitstrahl.update_layout(title_text = "<b>Weekly course of %s between %s. %s and %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
+        zeitstrahl.update_xaxes(title_text = "Weeknumber")
     else:
-        zeitverlauf.update_layout(title_text = "<b>Durchschnittlicher monatlicher Verlauf von %s zwischen dem %s. %s und dem %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
-        zeitverlauf.update_xaxes(title_text = "Tag im Monat")
-        zeitstrahl.update_layout(title_text = "<b>Monatlicher Verlauf %s ab dem %s. %s bis zum %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
-        zeitstrahl.update_xaxes(title_text = "Monatsnummer")
+        zeitverlauf.update_layout(title_text = "<b>Average monthly course of %s between %s. %s and %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
+        zeitverlauf.update_xaxes(title_text = "Day of the Month")
+        zeitstrahl.update_layout(title_text = "<b>Monthly course %s between %s. %s and %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
+        zeitstrahl.update_xaxes(title_text = "Monthnumber")
 
 
     return [zeitstrahl,zeitverlauf]
@@ -169,13 +187,14 @@ def orteHinzufuegen(werteStrahlOrt, werteVerlaufOrt,ortKlick,zeitstrahl,zeitverl
         ortQuelle = ortQuelle[ortQuelle.Ort == ortsname]
         ort2019 = ortQuelle.filter(like='2019', axis=0)
         ort2020 = ortQuelle.filter(like='2020', axis=0)
-        ortFigure = px.line(ortQuelle, x="Datum", y="Wert", color = "Jahr", hover_name="Ort",  color_discrete_sequence=['green', 'red'])
-        ortFigure.data[0].name = "2020 - " + ortsname
-        ortFigure.data[1].name = "2019 - " + ortsname
+        #ortFigure = px.line(ortQuelle, x="Datum", y="Wert", color = "Jahr", hover_name="Ort",  color_discrete_sequence=['green', 'red'])
+        #ortFigure.data[0].name = "2020 - " + ortsname
+        #ortFigure.data[1].name = "2019 - " + ortsname
         #zeitstrahl = go.Figure(data = zeitstrahl.data + ortFigure.data)
         #zeitstrahl.update_layout(height=300,margin={"r":0,"t":30,"l":30,"b":0},title_x=0.5)
-        zeitstrahl.add_trace(go.Scatter(x=ort2019.Datum, y=ort2019.Wert, name = ortsname + " 2019"))
-        zeitstrahl.add_trace(go.Scatter(x=ort2020.Datum, y=ort2020.Wert, name = ortsname + " 2020"))
+
+        zeitstrahl.add_trace(go.Scatter(x=ort2020.Datum, y=ort2020.Wert, name = ortsname + " 2020",line=dict(color="rgba(117, 13, 134, 1)")))
+        zeitstrahl.add_trace(go.Scatter(x=ort2019.Datum, y=ort2019.Wert, name = ortsname + " 2019",line=dict(color="rgba(117, 13, 134, 0.5)",dash='dash')))
         ortVerlaufQuelle = pd.DataFrame.from_dict(werteVerlaufOrt, orient='index', columns = ["Monat","Jahr","Ort","xAchse","Wert"])
         ortV2019 = ortVerlaufQuelle.filter(like='2019', axis=0)
         ortV2020 = ortVerlaufQuelle.filter(like='2020', axis=0)
@@ -183,8 +202,8 @@ def orteHinzufuegen(werteStrahlOrt, werteVerlaufOrt,ortKlick,zeitstrahl,zeitverl
         #ortVFigure.data[0].name = "2020 - " + ortsname
         #ortVFigure.data[1].name = "2019 - " + ortsname
         #zeitstrahl = go.Figure(data = zeitstrahl.data + ortFigure.data)
-        zeitverlauf.add_trace(go.Scatter(x=ortV2019.xAchse, y=ortV2019.Wert, name = ortsname + " 2019"))
-        zeitverlauf.add_trace(go.Scatter(x=ortV2020.xAchse, y=ortV2020.Wert, name = ortsname + " 2020"))
+        zeitverlauf.add_trace(go.Scatter(x=ortV2019.xAchse, y=ortV2019.Wert, name = ortsname + " 2019",line=dict(color="rgba(117, 13, 134, 0.5)",dash='dash')))
+        zeitverlauf.add_trace(go.Scatter(x=ortV2020.xAchse, y=ortV2020.Wert, name = ortsname + " 2020",line=dict(color="rgba(117, 13, 134, 1)")))
     return [zeitstrahl, zeitverlauf]
 
 def infoboxErstellen(schadstoff, kartenDic, ortKlick, start, ende):
@@ -194,12 +213,12 @@ def infoboxErstellen(schadstoff, kartenDic, ortKlick, start, ende):
         values = kartenDic[ele]
         summe += float(values[3])
     avg = summe/len(kartenDic)
-    result += (html.Li("Algemeiner Durchschnitt: " + str(round(avg, 3)))),
+    result += (html.Li("Average all stations: " + str(round(avg, 3)))),
    
     if ortKlick != None:
         ort = json.loads(ortKlick)["Ort"]
         ortsWert = kartenDic[ort][3]
-        result += (html.Li("Schnitt " + str(ort) + ": " + str(ortsWert))),
+        result += (html.Li("Average " + str(ort) + ": " + str(ortsWert))),
     
     startTag = datetime.datetime(2020,int(start),1).timetuple().tm_yday
     endTag = datetime.datetime(2020,int(ende),1).timetuple().tm_yday
@@ -216,12 +235,10 @@ def infoboxErstellen(schadstoff, kartenDic, ortKlick, start, ende):
 
     faelleSumme = faelleSummeEnde - faelleSummeStart
     todeSumme = todeSummeEnde - todeSummeStart
-    result += (html.Li("Kumulierte Fälle im Zeitraum: " + str(faelleSumme))),
-    result += (html.Li("Kumulierte Tode im Zeitraum: " + str(todeSumme))),
+    result += (html.Li("All cases summed up: " + str(faelleSumme))),
+    result += (html.Li("All deaths summed up: " + str(todeSumme))),
 
     return result
-    
-
 
 def filtern(schadstoff, start, end, startTag, endTag):
     #Öffnet das zum Schadstoff passende File und entfernt alle Linien, die nicht im Datumsrange liegen. Speichert diese in gefiltert

@@ -49,9 +49,9 @@ app.layout = html.Div(style={'backgroundColor': colors['background']},children=[
                 },
                 id="zeitabschnitt",
                 options=[
-                    {'label': 'Tage', 'value': 'Tag'},
-                    {'label': 'Woche', 'value': 'Woche'},
-                    {'label': 'Monat', 'value': 'Monat'}
+                    {'label': 'Day', 'value': 'Tag'},
+                    {'label': 'Week', 'value': 'Woche'},
+                    {'label': 'Month', 'value': 'Monat'}
                 ],
                 value='Tag',
                 labelStyle={'display': 'inline-block'}
@@ -77,18 +77,18 @@ app.layout = html.Div(style={'backgroundColor': colors['background']},children=[
                 dcc.Dropdown(
                     id='start',
                     options=[
-                        {'label': 'Januar', 'value': '1'},
-                        {'label': 'Februar', 'value': '2'},
-                        {'label': 'März', 'value': '3'},
+                        {'label': 'January', 'value': '1'},
+                        {'label': 'February', 'value': '2'},
+                        {'label': 'March', 'value': '3'},
                         {'label': 'April', 'value': '4'},
-                        {'label': 'Mai', 'value': '5'},
-                        {'label': 'Juni', 'value': '6'},
-                        {'label': 'Juli', 'value': '7'},
+                        {'label': 'May', 'value': '5'},
+                        {'label': 'June', 'value': '6'},
+                        {'label': 'July', 'value': '7'},
                         {'label': 'August', 'value': '8'},
                         {'label': 'September', 'value': '9'},
-                        {'label': 'Oktober', 'value': '10'},
+                        {'label': 'October', 'value': '10'},
                         {'label': 'November', 'value': '11'},
-                        {'label': 'Dezember', 'value': '12'},
+                        {'label': 'December', 'value': '12'}
                     ],
                     value='1',
                     clearable = False,
@@ -105,18 +105,18 @@ app.layout = html.Div(style={'backgroundColor': colors['background']},children=[
                 dcc.Dropdown(
                     id='ende',
                     options=[
-                        {'label': 'Januar', 'value': '1'},
-                        {'label': 'Februar', 'value': '2'},
-                        {'label': 'März', 'value': '3'},
+                        {'label': 'January', 'value': '1'},
+                        {'label': 'February', 'value': '2'},
+                        {'label': 'March', 'value': '3'},
                         {'label': 'April', 'value': '4'},
-                        {'label': 'Mai', 'value': '5'},
-                        {'label': 'Juni', 'value': '6'},
-                        {'label': 'Juli', 'value': '7'},
+                        {'label': 'May', 'value': '5'},
+                        {'label': 'June', 'value': '6'},
+                        {'label': 'July', 'value': '7'},
                         {'label': 'August', 'value': '8'},
                         {'label': 'September', 'value': '9'},
-                        {'label': 'Oktober', 'value': '10'},
+                        {'label': 'October', 'value': '10'},
                         {'label': 'November', 'value': '11'},
-                        {'label': 'Dezember', 'value': '12'}
+                        {'label': 'December', 'value': '12'}
                     ],
                     value='12',
                     clearable = False,
@@ -132,7 +132,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']},children=[
                     children=[
                         html.Div( # Karte
                             style={'width': '60%'},
-                            children=[dcc.Graph(id='g1', config=dict(locale="de"))], 
+                            children=[dcc.Graph(id='g1')], 
                             className="flex-child"
                         ),
                         html.Div( #Infobox
@@ -142,13 +142,13 @@ app.layout = html.Div(style={'backgroundColor': colors['background']},children=[
                             className="flex-child"
                         ),
                     ], className="flex-container"),
-                html.Div([dcc.Graph(id="corona", config=dict(locale="de")), #Corona-Graph
+                html.Div([dcc.Graph(id="corona"), #Corona-Graph
                 ]
             )], className="six columns"),
 
         html.Div([
-            html.Div([dcc.Graph(id="zeitstrahl", config=dict(locale="de"))]), #Zeitstrahl
-            html.Div([dcc.Graph(id="zeitverlauf", config=dict(locale="de"))]), #Zeitverlauf
+            html.Div([dcc.Graph(id="zeitstrahl")]), #Zeitstrahl
+            html.Div([dcc.Graph(id="zeitverlauf")]), #Zeitverlauf
             ],
             className="six columns"
         ),

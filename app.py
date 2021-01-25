@@ -27,7 +27,7 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__,external_scripts=external_scripts, external_stylesheets=external_stylesheets)
 #app.scripts.append_script({"external_url": "https://cdn.plot.ly/plotly-locale-de-latest.js"})
-app.title = 'Go Green'
+app.title = 'Decelearte'
 
 
 server = app.server
@@ -59,7 +59,7 @@ def karteRendern(gefiltert,ortKlick):
     """Erstellt die Figure Karte mit dem Werten aus gefiltert und gibt diese zurück """
     kartenDic = kartenWerte(gefiltert)
 
-    sequence = ['#636EFA','#EF553B','#00CC96','#AB63FA','#FFA15A','#19D3F3','#FF6692','#B6E880']
+    sequence = ['#000000','#000000','#000000','#000000','#000000','#000000','#000000','#000000']
     if ortKlick != None:
         ort = json.loads(ortKlick)["Ort"]
         counter = 0
@@ -67,10 +67,10 @@ def karteRendern(gefiltert,ortKlick):
             if elem == ort:
                 break
             counter += 1
-        sequence[counter] = "#750D86" 
+        sequence[counter] = "#b10000" 
     
     karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", color = "Ort", lon="Long", zoom=11, height=300, size = "Durchschnitt", 
-    color_discrete_sequence=sequence,hover_name="Ort",title="<b>Map of Barcelona</b>")
+    color_discrete_sequence=sequence,hover_name="Ort",title="<b>Air Quality Measure Stations</b>")
     karte.update_layout(mapbox_style="open-street-map",showlegend=False)
     karte.update_layout(margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
     return karte,kartenDic
@@ -144,12 +144,12 @@ def zeitstrahlUndVerlaufRendern(zeit, schadstoff, werteZeitstrahl, werteVerlauf,
     #zeitverlauf = px.line(verlaufQuelle, x="x-Achse", y="Wert", color = "Jahr", color_discrete_sequence=['orange', 'pink']) 
 
     
-    zeitstrahl.add_trace(go.Scatter(x=zeitstrahl2020.Monat, y=zeitstrahl2020.Wert,line=dict(color="rgba(255, 0, 0, 1)"), name="2020"))
-    zeitstrahl.add_trace(go.Scatter(x=zeitstrahl2019.Monat, y=zeitstrahl2019.Wert,line=dict(color="rgba(255, 0,  0, 0.5)", dash='dash'), name="2019"))
-    zeitverlauf.add_trace(go.Scatter(x=zeitverlauf2019.xAchse, y=zeitverlauf2019.Wert,line=dict(color="rgba(255, 0,  0, 0.5)", dash='dash'), name="2019"))
-    zeitverlauf.add_trace(go.Scatter(x=zeitverlauf2020.xAchse, y=zeitverlauf2020.Wert,line=dict(color="rgba(255, 0, 0, 1)"), name="2020")),
-    zeitstrahl.update_layout(height=300,margin={"r":0,"t":50,"l":30,"b":20},title_x=0.5, hovermode="x unified")
-    zeitverlauf.update_layout(height=300,margin={"r":0,"t":50,"l":30,"b":0},title_x=0.5, hovermode="x unified")
+    zeitstrahl.add_trace(go.Scatter(x=zeitstrahl2020.Monat, y=zeitstrahl2020.Wert,mode='lines',line=dict(color="rgba(0,0,0, 1)"), name="2020"))
+    zeitstrahl.add_trace(go.Scatter(x=zeitstrahl2019.Monat, y=zeitstrahl2019.Wert,mode='lines',line=dict(color="rgba(0,0,0, 0.5)", dash='dash'), name="2019"))
+    zeitverlauf.add_trace(go.Scatter(x=zeitverlauf2020.xAchse, y=zeitverlauf2020.Wert,mode='lines',line=dict(color="rgba(0,0,0, 1)"), name="2020")),
+    zeitverlauf.add_trace(go.Scatter(x=zeitverlauf2019.xAchse, y=zeitverlauf2019.Wert,mode='lines',line=dict(color="rgba(0,0,0, 0.5)", dash='dash'), name="2019"))
+    zeitstrahl.update_layout(height=300,margin={"r":20,"t":50,"l":50,"b":20},title_x=0.5, hovermode="x unified")
+    zeitverlauf.update_layout(height=200,margin={"r":20,"t":50,"l":50,"b":0},title_x=0.5, hovermode="x unified")
 
     if schadstoff == "CO":
         zeitverlauf.update_yaxes(title_text="<b>mg/m³</b>")
@@ -193,8 +193,8 @@ def orteHinzufuegen(werteStrahlOrt, werteVerlaufOrt,ortKlick,zeitstrahl,zeitverl
         #zeitstrahl = go.Figure(data = zeitstrahl.data + ortFigure.data)
         #zeitstrahl.update_layout(height=300,margin={"r":0,"t":30,"l":30,"b":0},title_x=0.5)
 
-        zeitstrahl.add_trace(go.Scatter(x=ort2020.Datum, y=ort2020.Wert, name = ortsname + " 2020",line=dict(color="rgba(117, 13, 134, 1)")))
-        zeitstrahl.add_trace(go.Scatter(x=ort2019.Datum, y=ort2019.Wert, name = ortsname + " 2019",line=dict(color="rgba(117, 13, 134, 0.5)",dash='dash')))
+        zeitstrahl.add_trace(go.Scatter(x=ort2020.Datum, y=ort2020.Wert, name = ortsname + " 2020",mode='lines',line=dict(color="rgba(177,0,0, 1)")))
+        zeitstrahl.add_trace(go.Scatter(x=ort2019.Datum, y=ort2019.Wert, name = ortsname + " 2019",mode='lines',line=dict(color="rgba(117, 0, 0, 0.5)",dash='dash')))
         ortVerlaufQuelle = pd.DataFrame.from_dict(werteVerlaufOrt, orient='index', columns = ["Monat","Jahr","Ort","xAchse","Wert"])
         ortV2019 = ortVerlaufQuelle.filter(like='2019', axis=0)
         ortV2020 = ortVerlaufQuelle.filter(like='2020', axis=0)
@@ -202,8 +202,9 @@ def orteHinzufuegen(werteStrahlOrt, werteVerlaufOrt,ortKlick,zeitstrahl,zeitverl
         #ortVFigure.data[0].name = "2020 - " + ortsname
         #ortVFigure.data[1].name = "2019 - " + ortsname
         #zeitstrahl = go.Figure(data = zeitstrahl.data + ortFigure.data)
-        zeitverlauf.add_trace(go.Scatter(x=ortV2019.xAchse, y=ortV2019.Wert, name = ortsname + " 2019",line=dict(color="rgba(117, 13, 134, 0.5)",dash='dash')))
-        zeitverlauf.add_trace(go.Scatter(x=ortV2020.xAchse, y=ortV2020.Wert, name = ortsname + " 2020",line=dict(color="rgba(117, 13, 134, 1)")))
+        zeitverlauf.add_trace(go.Scatter(x=ortV2020.xAchse, y=ortV2020.Wert, name = ortsname + " 2020",mode='lines',line=dict(color="rgba(117, 0, 0, 1)")))
+        zeitverlauf.add_trace(go.Scatter(x=ortV2019.xAchse, y=ortV2019.Wert, name = ortsname + " 2019",mode='lines',line=dict(color="rgba(117, 0, 0, 0.5)",dash='dash')))
+        
     return [zeitstrahl, zeitverlauf]
 
 def infoboxErstellen(schadstoff, kartenDic, ortKlick, start, ende):
@@ -218,7 +219,7 @@ def infoboxErstellen(schadstoff, kartenDic, ortKlick, start, ende):
     if ortKlick != None:
         ort = json.loads(ortKlick)["Ort"]
         ortsWert = kartenDic[ort][3]
-        result += (html.Li("Average " + str(ort) + ": " + str(ortsWert))),
+        result += (html.Li("Average in " + str(ort) + ": " + str(ortsWert))),
     
     startTag = datetime.datetime(2020,int(start),1).timetuple().tm_yday
     endTag = datetime.datetime(2020,int(ende),1).timetuple().tm_yday

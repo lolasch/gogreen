@@ -27,7 +27,7 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__,external_scripts=external_scripts, external_stylesheets=external_stylesheets)
 #app.scripts.append_script({"external_url": "https://cdn.plot.ly/plotly-locale-de-latest.js"})
-app.title = 'Decelearte'
+app.title = 'Decelerate'
 
 
 server = app.server
@@ -89,10 +89,10 @@ def coronaRendern(zeit):
     massnahmenQuelle = pd.read_csv("./daten/maßnahmen.csv")
     sub.add_trace(go.Bar(x = massnahmenQuelle.Date, y = massnahmenQuelle.Value1, marker_color = "rgba(205, 205, 205, 1)", hovertext = massnahmenQuelle.Event),secondary_y=False)
     
-    sub.update_layout(title_text="<b>Corona incident rate in Barcelona</b>",showlegend=False,height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
+    sub.update_layout(title_text="<b>Corona incident rate in Barcelona</b>",showlegend=False,height=300,margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5,hovermode="x unified")
     sub.update_xaxes(title_text="Zeit")
-    sub.update_yaxes(title_text="<b>Cases</b> absolute", secondary_y=False, title_font=dict(color="orange"))
-    sub.update_yaxes(title_text="<b>Deaths</b> absolute", secondary_y=True,title_font=dict(color="blue"))
+    sub.update_yaxes(title_text="<b>Cases</b> absolute", secondary_y=False, title_font=dict(color="blue"))
+    sub.update_yaxes(title_text="<b>Deaths</b> absolute", secondary_y=True,title_font=dict(color="orange"))
     #sub.update_yaxes(title_text="<b>Events</b>" ,tickvals=["Events"], visible = True, row= 4, col = 1)
     return sub
 

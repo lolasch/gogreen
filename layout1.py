@@ -11,9 +11,9 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
             html.Div(style={'display':'flex'},children=[
                 html.Div(style = {'flex':1.5},children=[
                     #html.H1('Decelerate.',style={'margin-bottom':'-10px', 'text-align':'left'}),
-                    html.H2('Slow down - take a deep breath.',
+                    html.H2('Decelerate.',
                             style={'margin-bottom': '-10px', 'text-align': 'left'}),
-                    html.H2('Air quality in Barcelona during a Pandemic.',
+                    html.H2('Air quality in Barcelona during a pandemic.',
                             style={'text-align': 'left'}),
                 ]),
                 html.Div(style={'flex':0.5},children=[
@@ -26,7 +26,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                 ]),
                 html.Div(
                     style={'flex':1}, children=[
-                        html.H4("Choose a time period:", style={'padding-bottom': '0px', 'margin-bottom':'0px'}),
+                        #html.H4("Choose a time period:", style={'padding-bottom': '0px', 'margin-bottom':'0px'}),
                         html.Div(style={'display':'flex', 'padding-top':'20px', 'padding-right':'15px'},children=[
                             html.Div(style={'flex-basis':'10%'}, children=[
                                 dcc.Input(
@@ -128,7 +128,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
         ], className="row"),
     html.Hr(),
 
-    html.Div(style = {"border":"2px gray solid",'border-radius': '5px 50px 0px 0px'},children=[
+    html.Div(children=[
         html.Div(children=[
             html.Div(
                 #style={'border-style': 'solid', 'border-color': 'grey', 'border-width': '1px'},
@@ -145,7 +145,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                                 style={'width': '20%', 'padding': '20px'},
                                 children=[html.H3("Infobox"),
                                         html.Ul(id='infobox'),
-                                        html.Button('Ort entfernen', id='reset', n_clicks=0)],
+                                        html.Button('remove station', id='reset',style={'display': 'none'},hidden=True)],
                                 className="flex-child"
                             ),
                             html.Div(
@@ -168,6 +168,6 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
         ], className="row"
         ),
     ]),
-    html.Div(id='ortDiv', style={'display': 'noney'}, className="row"),
+    html.Div(id='ortDiv', style={'display': 'none'}, className="row"),
     
 ])

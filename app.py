@@ -118,9 +118,13 @@ def TagAnzeigenEnde(endMonat):
     else:
         return [29,29]
 
-@app.callback(Output('ortDiv','children'), Input('g1','clickData'))
-def klickSpeichern(klick):
+@app.callback(Output('ortDiv','children'), [Input('g1','clickData'),Input('reset','n_clicks')])
+def klickSpeichern(klick,reset):
     """ Simpler Callback, der in ein unsichtbares Div die geklickten Orte schreibt"""
+    if not reset or reset % 2 == 0:
+        pass
+    else:
+        return None
     if klick != None:
         #print(klick)
         ort = str(klick['points'][0]['hovertext'])
@@ -128,6 +132,7 @@ def klickSpeichern(klick):
         return json.dumps(ort)
     else:
         return None
+    
 
 def zeitstrahlUndVerlaufRendern(zeit, schadstoff, werteZeitstrahl, werteVerlauf, start, ende, startTag,endTag):
     """Bekommt den Schadstoff (zur Achsenbeschriftung) und die Werte für Zeitstrahl und Verlauf. Returnt zwei Figs damit"""

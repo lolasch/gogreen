@@ -26,6 +26,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                 ]),
                 html.Div(
                     style={'flex':1}, children=[
+                        html.H4("Choose a time period:", style={'padding-bottom': '0px', 'margin-bottom':'0px'}),
                         html.Div(style={'display':'flex', 'padding-top':'20px', 'padding-right':'15px'},children=[
                             html.Div(style={'flex-basis':'10%'}, children=[
                                 dcc.Input(
@@ -55,7 +56,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                                     value='1',
                                     clearable=False,
                                 ), ]),
-                            html.Div(style={'flex-basis':'10%'}, children=[]),
+                            html.H3("-",style={'flex-basis':'10%', 'margin-top':'0px'}),
                             html.Div(style={'flex-basis':'10%'}, children=[
                                 dcc.Input(
                                     id='endTag',
@@ -143,7 +144,8 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
                             html.Div(  # Infobox
                                 style={'width': '20%', 'padding': '20px'},
                                 children=[html.H3("Infobox"),
-                                        html.Ul(id='infobox')],
+                                        html.Ul(id='infobox'),
+                                        html.Button('Ort entfernen', id='reset', n_clicks=0)],
                                 className="flex-child"
                             ),
                             html.Div(
@@ -166,6 +168,6 @@ app.layout = html.Div(style={'backgroundColor': colors['background']}, children=
         ], className="row"
         ),
     ]),
-    html.Div(id='ortDiv', style={'display': 'none'}, className="row"),
-
+    html.Div(id='ortDiv', style={'display': 'noney'}, className="row"),
+    
 ])

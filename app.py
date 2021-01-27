@@ -29,6 +29,7 @@ app = dash.Dash(__name__,external_scripts=external_scripts, external_stylesheets
 app.title = 'Decelerate'
 
 counter = 1
+schadstoffGlob = "NO2"
 
 server = app.server
 
@@ -44,6 +45,8 @@ execfile('layout1.py')
     [Input('zeitabschnitt', 'value'),Input('schadwert', 'value'),Input('start','value'), Input('ende','value'),Input('ortDiv','children'),Input('startTag','value'), Input('endTag','value')])
 def mainCallback(zeit, schadstoff, start, ende, ortKlick,startTag, endTag):
     """ Wird immer getriggert, wenn was passiert. Sammelt alles und stellt das dann in den Outputs dar """
+    global schadstoffGlob
+    schadstoffGlob = schadstoff
     gefiltert = filtern(schadstoff, int(start), int(ende), startTag,endTag)
     werteZeitstrahl, werteVerlauf = zeitstrahlBerechnen(zeit, gefiltert)
     werteStrahlOrt = ortsWerteBerechnen(zeit, gefiltert)
@@ -51,7 +54,7 @@ def mainCallback(zeit, schadstoff, start, ende, ortKlick,startTag, endTag):
     berechneteKarte, kartenDic = karteRendern(gefiltert,ortKlick)
     zeitstrahl, zeitverlauf = zeitstrahlUndVerlaufRendern(zeit, schadstoff,werteZeitstrahl,werteVerlauf, start, ende,startTag,endTag,ortKlick, werteStrahlOrt,werteVerlaufOrt)
     coronaFig = coronaRendern(zeit)
-    infobox = infoboxErstellen(schadstoff,kartenDic, ortKlick, start,ende)
+    infobox = infoboxErstellen(schadstoff,kartenDic, ortKlick, start,ende,startTag,endTag)
     return (berechneteKarte,coronaFig,zeitstrahl,zeitverlauf, infobox)
 
 def karteRendern(gefiltert,ortKlick):
@@ -70,7 +73,7 @@ def karteRendern(gefiltert,ortKlick):
     
     karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", lon="Long", color = "Ort", zoom=11, height=300, size = "Durchschnitt", 
     color_discrete_sequence=sequence,hover_name="Ort",title="<b>Air Quality Measure Stations</b>")
-    karte.update_layout(mapbox_style="open-street-map",showlegend=False)
+    karte.update_layout(mapbox_style="open-street-map",showlegend=True)
     karte.update_layout(margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
     return karte,kartenDic
 
@@ -92,6 +95,7 @@ def coronaRendern(zeit):
     sub.update_xaxes(title_text="Zeit")
     sub.update_yaxes(title_text="<b>Cases</b> absolute", secondary_y=False, title_font=dict(color="blue"))
     sub.update_yaxes(title_text="<b>Deaths</b> absolute", secondary_y=True,title_font=dict(color="orange"))
+    sub.update_yaxes(fixedrange=True)
     #sub.update_yaxes(title_text="<b>Events</b>" ,tickvals=["Events"], visible = True, row= 4, col = 1)
     return sub
 
@@ -117,10 +121,14 @@ def TagAnzeigenEnde(endMonat):
     else:
         return [29,29]
 
-@app.callback([Output('ortDiv','children'),Output('reset','style')], [Input('g1','clickData'),Input('reset','n_clicks')])
-def klickSpeichern(klick,reset):
+@app.callback([Output('ortDiv','children'),Output('reset','style')], [Input('g1','clickData'),Input('reset','n_clicks'),Input('schadwert', 'value')])
+def klickSpeichern(klick,reset,schadwert):
     """ Simpler Callback, der in ein unsichtbares Div die geklickten Orte schreibt"""
     global counter
+    global schadstoffGlob
+    if schadwert != schadstoffGlob:
+        schadstoffGlob = schadwert
+        return [None,{'display': 'none'}]
     if reset == counter:
         counter += 1
         return [None,{'display': 'none'}]
@@ -132,24 +140,24 @@ def klickSpeichern(klick,reset):
     else:
         return [None,{'display': 'none'}]
 
-
 def zeitstrahlUndVerlaufRendern(zeit, schadstoff, werteZeitstrahl, werteVerlauf, start, ende, startTag,endTag,ortKlick, werteStrahlOrt,werteVerlaufOrt):
     """Bekommt den Schadstoff (zur Achsenbeschriftung) und die Werte für Zeitstrahl und Verlauf. Returnt zwei Figs damit"""
     zeitstrahlQuelle = pd.DataFrame.from_dict(werteZeitstrahl ,orient='index', columns = ["Monat","Jahr","Wert"])
     verlaufQuelle = pd.DataFrame.from_dict(werteVerlauf ,orient='index', columns = ["Datum","Jahr","xAchse","Wert"])
-    zeitstrahl2020 = zeitstrahlQuelle.filter(like='2020', axis=0)
-    zeitstrahl2019 = zeitstrahlQuelle.filter(like='2019', axis=0)
-    zeitverlauf2020 = verlaufQuelle.filter(like='2020', axis=0)
-    zeitverlauf2019 = verlaufQuelle.filter(like='2019', axis=0)
+    zeitstrahl2020 = zeitstrahlQuelle[zeitstrahlQuelle['Jahr']=='2020']
+    zeitstrahl2019 = zeitstrahlQuelle[zeitstrahlQuelle['Jahr']=='2019']
+    zeitverlauf2020 = verlaufQuelle[verlaufQuelle['Jahr']=='2020']
+    zeitverlauf2019 = verlaufQuelle[verlaufQuelle['Jahr']=='2019']
     zeitstrahl = go.Figure()
     zeitverlauf = go.Figure()
 
-    
     zeitstrahl.add_trace(go.Scatter(x=zeitstrahl2020.Monat, y=zeitstrahl2020.Wert,mode='lines',line=dict(color="rgba(0,0,0, 1)"), name="2020"))
     zeitstrahl.add_trace(go.Scatter(x=zeitstrahl2019.Monat, y=zeitstrahl2019.Wert,mode='lines',line=dict(color="rgba(0,0,0, 0.5)", dash='dash'), name="2019"))
     zeitverlauf.add_trace(go.Scatter(x=zeitverlauf2020.xAchse, y=zeitverlauf2020.Wert,mode='lines',line=dict(color="rgba(0,0,0, 1)"), name="2020")),
     zeitverlauf.add_trace(go.Scatter(x=zeitverlauf2019.xAchse, y=zeitverlauf2019.Wert,mode='lines',line=dict(color="rgba(0,0,0, 0.5)", dash='dash'), name="2019"))
     zeitstrahl.update_layout(height=300,margin={"r":20,"t":50,"l":50,"b":20},title_x=0.5, hovermode="x unified")
+    zeitstrahl.update_yaxes(fixedrange=True)
+    zeitverlauf.update_yaxes(fixedrange=True)
     zeitverlauf.update_layout(height=200,margin={"r":20,"t":50,"l":50,"b":0},title_x=0.5, hovermode="x unified")
 
     if schadstoff == "CO":
@@ -158,44 +166,46 @@ def zeitstrahlUndVerlaufRendern(zeit, schadstoff, werteZeitstrahl, werteVerlauf,
     else: 
         zeitverlauf.update_yaxes(title_text="<b>µg/m³</b>")
         zeitstrahl.update_yaxes(title_text="<b>µg/m³</b>")
-    start = calendar.month_name[int(start)]
-    ende = calendar.month_name[int(ende)]
+    start2 = calendar.month_name[int(start)]
+    ende2 = calendar.month_name[int(ende)]
+    werte = []
+    for ele in range(1,53):
+        werte.append(ele)
     if zeit == "Tag":        
-        zeitverlauf.update_layout(title_text = "<b>Average daily course of %s between %s. %s and the %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
+        zeitverlauf.update_layout(title_text = "<b>Average daily course of %s between %s. %s and the %s. %s</b>" % (schadstoff,startTag,start2,endTag,ende2),title_x=0.5)
         zeitverlauf.update_xaxes(title_text = "Time")
-        zeitstrahl.update_layout(title_text = "<b>Daily course of %s between %s. %s and the %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
+        zeitstrahl.update_layout(title_text = "<b>Daily course of %s between %s. %s and the %s. %s</b>" % (schadstoff,startTag,start2,endTag,ende2),title_x=0.5)
         zeitstrahl.update_xaxes(title_text = "Date", ticktext=["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], 
         tickvals=["2020-01-15","2020-02-15","2020-03-15","2020-04-15","2020-05-15","2020-06-15","2020-07-15","2020-08-15","2020-09-15","2020-10-15","2020-11-15","2020-12-15"])
     elif zeit == "Woche":
-        zeitverlauf.update_layout(title_text = "<b>Average weekly course of %s between %s. %s and %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
+        zeitverlauf.update_layout(title_text = "<b>Average weekly course of %s between %s. %s and %s. %s</b>" % (schadstoff,startTag,start2,endTag,ende2),title_x=0.5)
         zeitverlauf.update_xaxes(title_text = "Day of the Week")
-        zeitstrahl.update_layout(title_text = "<b>Weekly course of %s between %s. %s and %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
-        zeitstrahl.update_xaxes(title_text = "Weeknumber")
+        zeitstrahl.update_layout(title_text = "<b>Weekly course of %s between %s. %s and %s. %s</b>" % (schadstoff,startTag,start2,endTag,ende2),title_x=0.5)
+        zeitstrahl.update_xaxes(title_text = "Weeknumber", categoryorder='array', categoryarray = werte)
     else:
-        zeitverlauf.update_layout(title_text = "<b>Average monthly course of %s between %s. %s and %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
+        zeitverlauf.update_layout(title_text = "<b>Average monthly course of %s between %s. %s and %s. %s</b>" % (schadstoff,startTag,start2,endTag,ende2),title_x=0.5)
         zeitverlauf.update_xaxes(title_text = "Day of the Month")
-        zeitstrahl.update_layout(title_text = "<b>Monthly course %s between %s. %s and %s. %s</b>" % (schadstoff,startTag,start,endTag,ende),title_x=0.5)
+        zeitstrahl.update_layout(title_text = "<b>Monthly course %s between %s. %s and %s. %s</b>" % (schadstoff,startTag,start2,endTag,ende2),title_x=0.5)
         zeitstrahl.update_xaxes(title_text = "Monthnumber")
 
     if ortKlick != None:
         ortsname = json.loads(ortKlick)["Ort"]
         ortQuelle = pd.DataFrame.from_dict(werteStrahlOrt, orient='index', columns = ["Datum","Jahr","Ort","Wert"])
         ortQuelle = ortQuelle[ortQuelle.Ort == ortsname]
-        ort2019 = ortQuelle.filter(like='2019', axis=0)
-        ort2020 = ortQuelle.filter(like='2020', axis=0)
+        ort2019 = ortQuelle[ortQuelle['Jahr']=='2019']
+        ort2020 = ortQuelle[ortQuelle['Jahr']=='2020']
 
         zeitstrahl.add_trace(go.Scatter(x=ort2020.Datum, y=ort2020.Wert, name = ortsname + " 2020",mode='lines',line=dict(color="rgba(177,0,0, 1)")))
         zeitstrahl.add_trace(go.Scatter(x=ort2019.Datum, y=ort2019.Wert, name = ortsname + " 2019",mode='lines',line=dict(color="rgba(117, 0, 0, 1)",dash='dash')))
         ortVerlaufQuelle = pd.DataFrame.from_dict(werteVerlaufOrt, orient='index', columns = ["Monat","Jahr","Ort","xAchse","Wert"])
-        ortV2019 = ortVerlaufQuelle.filter(like='2019', axis=0)
-        ortV2020 = ortVerlaufQuelle.filter(like='2020', axis=0)
+        ortV2019 = ortVerlaufQuelle[ortVerlaufQuelle['Jahr']=='2019']
+        ortV2020 = ortVerlaufQuelle[ortVerlaufQuelle['Jahr']=='2020']
         zeitverlauf.add_trace(go.Scatter(x=ortV2020.xAchse, y=ortV2020.Wert, name = ortsname + " 2020",mode='lines',line=dict(color="rgba(117, 0, 0, 1)")))
         zeitverlauf.add_trace(go.Scatter(x=ortV2019.xAchse, y=ortV2019.Wert, name = ortsname + " 2019",mode='lines',line=dict(color="rgba(117, 0, 0, 1)",dash='dash')))
 
     return [zeitstrahl,zeitverlauf]
 
-
-def infoboxErstellen(schadstoff, kartenDic, ortKlick, start, ende):
+def infoboxErstellen(schadstoff, kartenDic, ortKlick, start, ende,startTag,endTag):
     result = ()
     summe = 0
     for ele in kartenDic:
@@ -209,8 +219,8 @@ def infoboxErstellen(schadstoff, kartenDic, ortKlick, start, ende):
         ortsWert = kartenDic[ort][3]
         result += (html.Li("Average in " + str(ort) + ": " + str(ortsWert))),
     
-    startTag = datetime.datetime(2020,int(start),1).timetuple().tm_yday
-    endTag = datetime.datetime(2020,int(ende),1).timetuple().tm_yday
+    startTag = datetime.datetime(2020,int(start),startTag).timetuple().tm_yday
+    endTag = datetime.datetime(2020,int(ende),endTag).timetuple().tm_yday
     
     startline = linecache.getline("./daten/Faelle_nach_KreisenSort.csv", startTag + 1)
     startline = startline.strip()
@@ -233,8 +243,6 @@ def filtern(schadstoff, start, end, startTag, endTag):
     #Öffnet das zum Schadstoff passende File und entfernt alle Linien, die nicht im Datumsrange liegen. Speichert diese in gefiltert
     #
     gefiltert = {}
-    #start = datetime.datetime(int(start[:4]),int(start[5:7]),int(start[8:10]))
-    #end = datetime.datetime(int(end[:4]),int(end[5:7]),int(end[8:10]))
     file = open("./daten/" + schadstoff + ".csv")
     next(file)
     for lines in file:
@@ -242,16 +250,17 @@ def filtern(schadstoff, start, end, startTag, endTag):
         linie = lines.split(",")
         ort = linie[0]
         datum = linie[1].split(" ")
-        stunde = int(datum[1]) % 24
-        datum = datum[0].split("-")
-        jahr = int(datum[0])
-        monat = int(datum[1])
-        tag = int(datum[2])
-        wert = linie[2]
-        if wert != "NA":
-            if (start == monat and tag >= startTag) or (start < monat and monat < end) or (end == monat and tag <= endTag):
-                datum = datetime.datetime(jahr, monat, tag,int(stunde))
-                gefiltert[ort, datum] = (ort, datum, float(wert))
+        if int(datum[1]) % 24 != 0:
+            stunde = int(datum[1])
+            datum = datum[0].split("-")
+            jahr = int(datum[0])
+            monat = int(datum[1])
+            tag = int(datum[2])
+            wert = linie[2]
+            if wert != "NA":
+                if (start == monat and tag >= startTag) or (start < monat and monat < end) or (end == monat and tag <= endTag):
+                    datum = datetime.datetime(jahr, monat, tag,int(stunde))
+                    gefiltert[ort, datum] = (ort, datum, float(wert))
                 
     return gefiltert
 
@@ -277,7 +286,11 @@ def zeitstrahlBerechnen(zeit, gefiltert):
             time = datum.weekday() #Nummer des Tages in der Woche
             #datum = date.fromisocalendar(wochensplit[0] , wochensplit[1], 1) #Datum des Wochenbeginns
             datum = wochensplit[1]
-            jahr = wochensplit[0]
+            if jahr == 2019 and datum == 1:
+                jahr = 2019
+                datum = 53
+            else:
+                jahr = wochensplit[0]
         else: 
             time = datum.day
             xaxis = str(time) + "."

@@ -73,7 +73,7 @@ def karteRendern(gefiltert,ortKlick):
     
     karte = px.scatter_mapbox(pd.DataFrame.from_dict(kartenDic,orient='index', columns = ["Ort","Lat","Long", "Durchschnitt"]), lat="Lat", lon="Long", color = "Ort", zoom=11, height=300, size = "Durchschnitt", 
     color_discrete_sequence=sequence,hover_name="Ort",title="<b>Air Quality Measure Stations</b>")
-    karte.update_layout(mapbox_style="open-street-map",showlegend=True)
+    karte.update_layout(mapbox_style="open-street-map",showlegend=False)
     karte.update_layout(margin={"r":0,"t":40,"l":30,"b":0},title_x=0.5)
     return karte,kartenDic
 

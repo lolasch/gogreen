@@ -5,3 +5,4 @@ Das Projekt heißt inzwischen **Decelerate!**
 
 Der Prototyp ist auf https://decelerate.herokuapp.com/ zu finden.
 
+Die Dokumentation ist, neben vielen anderen tollen Projekten, auf der InfoVis Seite der Hochschule Mannheim zu finden: https://infovis-mannheim.de/
